@@ -1,11 +1,11 @@
 package main
 
 import (
+	"compiler/src/tokenizer"
 	"fmt"
-	"src/tokenizer"
 )
 
 func main() {
-	fmt.Println("Hello, World!")
-	tokenizer.Tokenize("Hello, World!")
+	tokens := tokenizer.Tokenize("// bla \n if (kissa == true) {}", "test")
+	fmt.Println(tokens)
 }

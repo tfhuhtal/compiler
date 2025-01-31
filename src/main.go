@@ -2,16 +2,71 @@ package main
 
 import (
 	"compiler/src/tokenizer"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-func call_compiler(sourceCode string, file string) []tokenizer.Token {
+type Input struct {
+	Command string `json:"command"`
+	Code    string `json:"code,omitempty"`
+}
+
+type Result struct {
+	Program string `json:"program,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+func callCompiler(sourceCode string, file string) []tokenizer.Token {
 	tokens := tokenizer.Tokenize(sourceCode, file)
 	return tokens
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request", http.StatusBadRequest)
+		return
+	}
+
+	defer r.Body.Close()
+
+	var input Input
+	if err := json.Unmarshal(body, &input); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	var result Result
+
+	switch input.Command {
+	case "compile":
+		compiled := callCompiler(input.Code, "test")
+		result.Program = base64.StdEncoding.EncodeToString(compiled)
+	case "ping":
+		// no operation
+	default:
+		result.Error = fmt.Sprintf("Unknown command: %s", input.Command)
+	}
+	w.Header().Set("Content-type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func runServer(host string, port int) {
+	address := fmt.Sprintf("%s:%d", host, port)
+	fmt.Println("Server running on: ", address)
+	http.HandleFunc("/", handler)
+	err := http.ListenAndServe(address, nil)
+	if err != nil {
+		fmt.Println("Error: ", err)
+	}
+
 }
 
 func main() {
@@ -65,10 +120,12 @@ func main() {
 	}
 
 	if command == "compile" {
-		tokens = call_compiler("if a <= bee then print_int(123)", inputFile)
+		tokens = callCompiler("if a <= bee then print_int(123)", inputFile)
 		fmt.Println(tokens)
 		fmt.Println(outputFile)
 	} else if command == "serve" {
-
+		runServer(host, port)
+	} else {
+		fmt.Fprintln(os.Stderr, "Error: Unknown command")
 	}
 }

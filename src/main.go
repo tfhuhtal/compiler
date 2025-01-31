@@ -2,7 +2,6 @@ package main
 
 import (
 	"compiler/src/tokenizer"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -46,9 +45,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	var result Result
 
 	switch input.Command {
-	case "compile":
-		compiled := callCompiler(input.Code, "test")
-		result.Program = base64.StdEncoding.EncodeToString(compiled)
+	/*case "compile":*/
+	/*compiled := callCompiler(input.Code, "test")*/
+	/*result.Program = base64.StdEncoding.EncodeToString(compiled)*/
 	case "ping":
 		// no operation
 	default:

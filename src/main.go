@@ -1,6 +1,8 @@
 package main
 
 import (
+	"compiler/src/ast"
+	"compiler/src/parser"
 	"compiler/src/tokenizer"
 	"encoding/json"
 	"fmt"
@@ -22,9 +24,13 @@ type Result struct {
 	Error   string `json:"error,omitempty"`
 }
 
-func callCompiler(sourceCode string, file string) []tokenizer.Token {
+func callCompiler(sourceCode string, file string) ast.Expression {
 	tokens := tokenizer.Tokenize(sourceCode, file)
-	return tokens
+	exp, err := parser.Parse(tokens)
+	if err != nil {
+		fmt.Errorf("Error: ", err)
+	}
+	return exp
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +81,6 @@ func main() {
 	var host string = "127.0.0.1"
 	var port int = 3000
 	var err error
-	var tokens []tokenizer.Token
 
 	for _, arg := range os.Args[1:] {
 		if matched, _ := regexp.MatchString(`^--output=(.+)`, arg); matched {
@@ -119,8 +124,8 @@ func main() {
 	}
 
 	if command == "compile" {
-		tokens = callCompiler("if a <= bee then print_int(123)", inputFile)
-		fmt.Println(tokens)
+		result := callCompiler("1 + 3", inputFile)
+		fmt.Println(result)
 		fmt.Println(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

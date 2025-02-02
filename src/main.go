@@ -124,7 +124,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		result := callCompiler("14 + 3", inputFile)
+		result := callCompiler("1 - 2 + 3", inputFile)
 		fmt.Println(result)
 		fmt.Println(outputFile)
 	} else if command == "serve" {

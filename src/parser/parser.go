@@ -85,27 +85,31 @@ func parseTerm(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
 	return ast.Identifier{}, fmt.Errorf("%v: expected an integer literal or an identifier", token.Location)
 }
 
-func parseExpression(pos *int, tokens []tokenizer.Token) (ast.BinaryOp, error) {
+func parseExpression(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
 	left, err := parseTerm(pos, tokens)
 	if err != nil {
 		return ast.BinaryOp{}, err
 	}
 
-	operatorToken, err := consume(pos, tokens, []string{"+", "-"})
-	if err != nil {
-		return ast.BinaryOp{}, err
-	}
+	// looping while there is no more operation tokens
+	for peek(pos, tokens).Text == "+" || peek(pos, tokens).Text == "-" {
+		operatorToken, err := consume(pos, tokens, []string{"+", "-"})
+		if err != nil {
+			return ast.BinaryOp{}, err
+		}
 
-	right, err := parseTerm(pos, tokens)
-	if err != nil {
-		return ast.BinaryOp{}, err
-	}
+		right, err := parseTerm(pos, tokens)
+		if err != nil {
+			return ast.BinaryOp{}, err
+		}
 
-	return ast.BinaryOp{
-		Left:  left,
-		Op:    operatorToken.Text,
-		Right: right,
-	}, nil
+		left = ast.BinaryOp{
+			Left:  left,
+			Op:    operatorToken.Text,
+			Right: right,
+		}
+	}
+	return left, err
 }
 
 func Parse(tokens []tokenizer.Token) (ast.Expression, error) {

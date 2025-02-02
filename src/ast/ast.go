@@ -5,7 +5,7 @@ type Expression interface {
 }
 
 type Literal struct {
-	Value any
+	Value int || bool
 }
 
 func (Literal) isExpression() {}

@@ -96,6 +96,7 @@ func parseFactor(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
 
 func parseTerm(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
 	left, err := parseFactor(pos, tokens)
+	
 	for peek(pos, tokens).Text == "*" || peek(pos, tokens).Text == "/" {
 		operatorToken, err := consume(pos, tokens, nil)
 		if err != nil {
@@ -117,11 +118,7 @@ func parseTerm(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
 
 func parseExpression(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
 	left, err := parseTerm(pos, tokens)
-	if err != nil {
-		return ast.BinaryOp{}, err
-	}
 
-	// looping while there is no more operation tokens
 	for peek(pos, tokens).Text == "+" || peek(pos, tokens).Text == "-" {
 		operatorToken, err := consume(pos, tokens, nil)
 		if err != nil {

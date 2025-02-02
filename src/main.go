@@ -124,7 +124,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		result := callCompiler("(a + b) * c", inputFile)
+		result := callCompiler("{f(a);\nx = y;\nf(x)}", inputFile)
 		fmt.Println(result)
 		fmt.Println(outputFile)
 	} else if command == "serve" {

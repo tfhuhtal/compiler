@@ -5,7 +5,7 @@ type Expression interface {
 }
 
 type Literal struct {
-	Value int || bool
+	Value any
 }
 
 func (Literal) isExpression() {}
@@ -33,15 +33,28 @@ type IfExpression struct {
 func (IfExpression) isExpression() {}
 
 type FunctionCall struct {
-	Name string
+	Name Expression
 	Args []Expression
 }
 
 func (FunctionCall) isExpression() {}
 
-// Construct AST for "x + 3"
-var exampleAST = BinaryOp{
-	Left:  Identifier{Name: "x"},
-	Op:    "+",
-	Right: Literal{Value: 3},
+type UnaryOp struct {
+	Op    string
+	Right Expression
 }
+
+func (UnaryOp) isExpression() {}
+
+type Assignment struct {
+	Left 	Expression
+	Right	Expression
+}
+
+func (Assignment) isExpression() {}
+
+type Block struct {
+	Expressions []Expression
+}
+
+func (Block) isExpression() {}

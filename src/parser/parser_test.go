@@ -28,7 +28,7 @@ func TestParser(t *testing.T) {
 		{
 			input: "f(x, y + z)",
 			expected: ast.FunctionCall{
-				Function: ast.Identifier{Name: "f"},
+				Name: ast.Identifier{Name: "f"},
 				Args: []ast.Expression{
 					ast.Identifier{Name: "x"},
 					ast.BinaryOp{
@@ -85,7 +85,7 @@ func compareAST(a, b ast.Expression) bool {
 		return ok && a.Op == b.Op && compareAST(a.Left, b.Left) && compareAST(a.Right, b.Right)
 	case ast.FunctionCall:
 		b, ok := b.(ast.FunctionCall)
-		if !ok || !compareAST(a.Function, b.Function) || len(a.Args) != len(b.Args) {
+		if !ok || !compareAST(a.Name, b.Name) || len(a.Args) != len(b.Args) {
 			return false
 		}
 		for i := range a.Args {
@@ -97,4 +97,56 @@ func compareAST(a, b ast.Expression) bool {
 	default:
 		return false
 	}
+}
+
+func TestParseBlock(t *testing.T) {
+    tokens := tokenizer.Tokenize(`{
+        f(a);
+        x = y;
+        f(x)
+    }`, "test")
+    expr, err := Parse(tokens)
+    if err != nil {
+        t.Fatalf("unexpected error: %v", err)
+    }
+    block, ok := expr.(ast.Block)
+    if !ok {
+        t.Fatalf("expected block, got %T", expr)
+    }
+    if len(block.Expressions) != 3 {
+        t.Fatalf("expected 3 expressions, got %d", len(block.Expressions))
+    }
+}
+
+func TestParseBlockWithOptionalSemicolon(t *testing.T) {
+    tokens := tokenizer.Tokenize(`{
+        f(a);
+        x = y;
+        f(x);
+    }`, "test")
+    expr, err := Parse(tokens)
+    if err != nil {
+        t.Fatalf("unexpected error: %v", err)
+    }
+    block, ok := expr.(ast.Block)
+    if !ok {
+        t.Fatalf("expected block, got %T", expr)
+    }
+    if len(block.Expressions) != 4 {
+        t.Fatalf("expected 4 expressions, got %d", len(block.Expressions))
+    }
+    if _, ok := block.Expressions[3].(ast.Literal); !ok {
+        t.Fatalf("expected last expression to be a literal, got %T", block.Expressions[3])
+    }
+}
+
+func TestParseBlockWithError(t *testing.T) {
+    tokens := tokenizer.Tokenize(`{
+        f(a)
+        x = y;
+    }`, "test")
+    _, err := Parse(tokens)
+    if err == nil {
+        t.Fatalf("expected error, got nil")
+    }
 }

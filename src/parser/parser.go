@@ -75,14 +75,44 @@ func parseIdentifier(pos *int, tokens []tokenizer.Token) (ast.Identifier, error)
 	return ast.Identifier{Name: consumedToken.Text}, nil
 }
 
-func parseTerm(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
+func parseParenthesised(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
+	consume(pos, tokens, "(")
+	expr, err := parseExpression(pos, tokens)
+	consume(pos, tokens, ")")
+	return expr, err
+}
+
+func parseFactor(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
 	token := peek(pos, tokens)
-	if token.Type == "IntLiteral" {
+	if token.Text == "(" {
+		return parseParenthesised(pos, tokens)
+	} else if token.Type == "IntLiteral" {
 		return parseIntLiteral(pos, tokens)
 	} else if token.Type == "Identifier" {
 		return parseIdentifier(pos, tokens)
 	}
 	return ast.Identifier{}, fmt.Errorf("%v: expected an integer literal or an identifier", token.Location)
+}
+
+func parseTerm(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
+	left, err := parseFactor(pos, tokens)
+	for peek(pos, tokens).Text == "*" || peek(pos, tokens).Text == "/" {
+		operatorToken, err := consume(pos, tokens, nil)
+		if err != nil {
+			return ast.BinaryOp{}, err
+		}
+		operator := operatorToken.Text
+		right, err := parseFactor(pos, tokens)
+		if err != nil {
+			return ast.BinaryOp{}, err
+		}
+		left = ast.BinaryOp{
+			Left:  left,
+			Op:    operator,
+			Right: right,
+		}
+	}
+	return left, err
 }
 
 func parseExpression(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
@@ -93,19 +123,18 @@ func parseExpression(pos *int, tokens []tokenizer.Token) (ast.Expression, error)
 
 	// looping while there is no more operation tokens
 	for peek(pos, tokens).Text == "+" || peek(pos, tokens).Text == "-" {
-		operatorToken, err := consume(pos, tokens, []string{"+", "-"})
+		operatorToken, err := consume(pos, tokens, nil)
 		if err != nil {
 			return ast.BinaryOp{}, err
 		}
-
+		operator := operatorToken.Text
 		right, err := parseTerm(pos, tokens)
 		if err != nil {
 			return ast.BinaryOp{}, err
 		}
-
 		left = ast.BinaryOp{
 			Left:  left,
-			Op:    operatorToken.Text,
+			Op:    operator,
 			Right: right,
 		}
 	}

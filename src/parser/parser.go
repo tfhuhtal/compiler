@@ -22,7 +22,6 @@ func peek(pos *int, tokens []tokenizer.Token) tokenizer.Token {
 func consume(pos *int, tokens []tokenizer.Token, expected interface{}) (tokenizer.Token, error) {
 	token := peek(pos, tokens)
 
-	fmt.Println(expected)
 	if expected == nil {
 		*pos++
 		return token, nil
@@ -66,7 +65,6 @@ func parseIntLiteral(pos *int, tokens []tokenizer.Token) (ast.Literal, error) {
 }
 
 func parseExpression(pos *int, tokens []tokenizer.Token) (ast.BinaryOp, error) {
-	fmt.Println(*pos)
 	left, err := parseIntLiteral(pos, tokens)
 	if err != nil {
 		return ast.BinaryOp{}, err

@@ -7,24 +7,30 @@ import (
 	"strconv"
 )
 
-func peek(pos int, tokens []tokenizer.Token) tokenizer.Token {
-	if pos < len(tokens) {
-		return tokens[pos]
-	} else {
-		return tokenizer.Token{
-			Location: tokens[len(tokens)-1].Location,
-			Type:     "end",
-			Text:     "",
-		}
+func peek(pos *int, tokens []tokenizer.Token) tokenizer.Token {
+	if *pos < len(tokens) {
+		return tokens[*pos]
+	}
+	// If we're at or past the end, return an "end" token.
+	return tokenizer.Token{
+		Location: tokens[len(tokens)-1].Location,
+		Type:     "end",
+		Text:     "",
 	}
 }
 
 func consume(pos *int, tokens []tokenizer.Token, expected interface{}) (tokenizer.Token, error) {
-	token := peek(*pos, tokens)
+	token := peek(pos, tokens)
+
+	fmt.Println(expected)
+	if expected == nil {
+		*pos++
+		return token, nil
+	}
 
 	if expectedStr, ok := expected.(string); ok {
 		if token.Text != expectedStr {
-			return tokenizer.Token{}, fmt.Errorf("%s: expected \"%s\"", token.Location, expectedStr)
+			return tokenizer.Token{}, fmt.Errorf("%v: expected \"%s\"", token.Location, expectedStr)
 		}
 	}
 
@@ -37,35 +43,36 @@ func consume(pos *int, tokens []tokenizer.Token, expected interface{}) (tokenize
 			}
 		}
 		if !matched {
-			return tokenizer.Token{}, fmt.Errorf("%s: expected \"%s\"", token.Location, expectedList)
+			return tokenizer.Token{}, fmt.Errorf("%v: expected \"%v\"", token.Location, expectedList)
 		}
 	}
 
 	*pos++
-
 	return token, nil
 }
 
-func parseIntLiteral(pos int, tokens []tokenizer.Token) (ast.Literal, error) {
+func parseIntLiteral(pos *int, tokens []tokenizer.Token) (ast.Literal, error) {
 	token := peek(pos, tokens)
-	if token.Type != "int_literal" {
-		return ast.Literal{}, fmt.Errorf("%s: expected an integer literal", token.Location)
+	if token.Type != "Integer" {
+		return ast.Literal{}, fmt.Errorf("%v: expected an integer literal", token.Location)
 	}
-	consumedToken, err := consume(&pos, tokens, nil)
+	consumedToken, err := consume(pos, tokens, nil)
 	if err != nil {
 		return ast.Literal{}, err
 	}
+	fmt.Println(consumedToken)
 	value, err := strconv.Atoi(consumedToken.Text)
 	return ast.Literal{Value: value}, err
 }
 
-func parseExpression(pos int, tokens []tokenizer.Token) (ast.BinaryOp, error) {
+func parseExpression(pos *int, tokens []tokenizer.Token) (ast.BinaryOp, error) {
+	fmt.Println(*pos)
 	left, err := parseIntLiteral(pos, tokens)
 	if err != nil {
 		return ast.BinaryOp{}, err
 	}
 
-	operatorToken, err := consume(&pos, tokens, []string{"+", "-"})
+	operatorToken, err := consume(pos, tokens, []string{"+", "-"})
 	if err != nil {
 		return ast.BinaryOp{}, err
 	}
@@ -84,7 +91,6 @@ func parseExpression(pos int, tokens []tokenizer.Token) (ast.BinaryOp, error) {
 
 func Parse(tokens []tokenizer.Token) (ast.Expression, error) {
 	pos := 0
-
-	exp, err := parseExpression(pos, tokens)
-	return exp, err
+	expr, err := parseExpression(&pos, tokens)
+	return expr, err
 }

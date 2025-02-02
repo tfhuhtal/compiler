@@ -38,3 +38,10 @@ type FunctionCall struct {
 }
 
 func (FunctionCall) isExpression() {}
+
+// Construct AST for "x + 3"
+var exampleAST = BinaryOp{
+	Left:  Identifier{Name: "x"},
+	Op:    "+",
+	Right: Literal{Value: 3},
+}

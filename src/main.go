@@ -28,7 +28,7 @@ func callCompiler(sourceCode string, file string) ast.Expression {
 	tokens := tokenizer.Tokenize(sourceCode, file)
 	exp, err := parser.Parse(tokens)
 	if err != nil {
-		fmt.Errorf("Error: ", err)
+		fmt.Println("Error: ", err)
 	}
 	return exp
 }
@@ -124,7 +124,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		result := callCompiler("1 + 3", inputFile)
+		result := callCompiler("14 + 3", inputFile)
 		fmt.Println(result)
 		fmt.Println(outputFile)
 	} else if command == "serve" {

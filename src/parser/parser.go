@@ -59,7 +59,6 @@ func parseIntLiteral(pos *int, tokens []tokenizer.Token) (ast.Literal, error) {
 	if err != nil {
 		return ast.Literal{}, err
 	}
-	fmt.Println(consumedToken)
 	value, err := strconv.Atoi(consumedToken.Text)
 	return ast.Literal{Value: value}, err
 }

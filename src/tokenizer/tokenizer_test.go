@@ -21,13 +21,13 @@ func TestTokenize(t *testing.T) {
 	tokens := Tokenize("if  3\nwhile + - 4 5 6 kissa", "test")
 	expected := []Token{
 		{Text: "if", Type: Identifier, Location: L},
-		{Text: "3", Type: Integer, Location: L},
+		{Text: "3", Type: IntLiteral, Location: L},
 		{Text: "while", Type: Identifier, Location: L},
 		{Text: "+", Type: Operator, Location: L},
 		{Text: "-", Type: Operator, Location: L},
-		{Text: "4", Type: Integer, Location: L},
-		{Text: "5", Type: Integer, Location: L},
-		{Text: "6", Type: Integer, Location: L},
+		{Text: "4", Type: IntLiteral, Location: L},
+		{Text: "5", Type: IntLiteral, Location: L},
+		{Text: "6", Type: IntLiteral, Location: L},
 		{Text: "kissa", Type: Identifier, Location: L},
 	}
 	if len(tokens) != len(expected) {

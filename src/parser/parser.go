@@ -52,7 +52,7 @@ func consume(pos *int, tokens []tokenizer.Token, expected interface{}) (tokenize
 
 func parseIntLiteral(pos *int, tokens []tokenizer.Token) (ast.Literal, error) {
 	token := peek(pos, tokens)
-	if token.Type != "Integer" {
+	if token.Type != "IntLiteral" {
 		return ast.Literal{}, fmt.Errorf("%v: expected an integer literal", token.Location)
 	}
 	consumedToken, err := consume(pos, tokens, nil)
@@ -63,8 +63,30 @@ func parseIntLiteral(pos *int, tokens []tokenizer.Token) (ast.Literal, error) {
 	return ast.Literal{Value: value}, err
 }
 
+func parseIdentifier(pos *int, tokens []tokenizer.Token) (ast.Identifier, error) {
+	token := peek(pos, tokens)
+	if token.Type != "Identifier" {
+		return ast.Identifier{}, fmt.Errorf("%v: expected an identifier", token.Location)
+	}
+	consumedToken, err := consume(pos, tokens, nil)
+	if err != nil {
+		return ast.Identifier{}, err
+	}
+	return ast.Identifier{Name: consumedToken.Text}, nil
+}
+
+func parseTerm(pos *int, tokens []tokenizer.Token) (ast.Expression, error) {
+	token := peek(pos, tokens)
+	if token.Type == "IntLiteral" {
+		return parseIntLiteral(pos, tokens)
+	} else if token.Type == "Identifier" {
+		return parseIdentifier(pos, tokens)
+	}
+	return ast.Identifier{}, fmt.Errorf("%v: expected an integer literal or an identifier", token.Location)
+}
+
 func parseExpression(pos *int, tokens []tokenizer.Token) (ast.BinaryOp, error) {
-	left, err := parseIntLiteral(pos, tokens)
+	left, err := parseTerm(pos, tokens)
 	if err != nil {
 		return ast.BinaryOp{}, err
 	}
@@ -74,7 +96,7 @@ func parseExpression(pos *int, tokens []tokenizer.Token) (ast.BinaryOp, error) {
 		return ast.BinaryOp{}, err
 	}
 
-	right, err := parseIntLiteral(pos, tokens)
+	right, err := parseTerm(pos, tokens)
 	if err != nil {
 		return ast.BinaryOp{}, err
 	}

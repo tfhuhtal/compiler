@@ -7,7 +7,7 @@ import (
 type TokenType string
 
 const (
-	Integer     TokenType = "Integer"
+	IntLiteral  TokenType = "IntLiteral"
 	Operator    TokenType = "Operator"
 	Punctuation TokenType = "Punctuation"
 	Identifier  TokenType = "Identifier"
@@ -30,7 +30,7 @@ func Tokenize(sourceCode string, file string) []Token {
 	line, column := 1, 1
 
 	tokenPatterns := map[TokenType]*regexp.Regexp{
-		Integer:     regexp.MustCompile(`^\d+`),
+		IntLiteral:  regexp.MustCompile(`^\d+`),
 		Operator:    regexp.MustCompile(`^(==|!=|<=|>=|[+\-*/=<>])`),
 		Punctuation: regexp.MustCompile(`^[(),{};]`),
 		Identifier:  regexp.MustCompile(`^[a-zA-Z_]\w*`),

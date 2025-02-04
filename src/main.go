@@ -25,9 +25,13 @@ type Result struct {
 }
 
 func callCompiler(sourceCode string, file string) []ast.Expression {
+	fmt.Println(sourceCode)
+	fmt.Println("=================================================")
 	tokens := tokenizer.Tokenize(sourceCode, file)
 	fmt.Println(tokens)
+	fmt.Println("=================================================")
 	exp := parser.Parse(tokens)
+	fmt.Println(exp)
 	return exp
 }
 
@@ -122,12 +126,11 @@ func main() {
 	}
 
 	if command == "compile" {
-		result := callCompiler("a = b", inputFile)
+		result := callCompiler("while n > 1 do {if n % 2 == 0 then {n = n / 2;} else { n = 3*n + 1;}print_int(n);}", inputFile)
 		for _, row := range result {
 			fmt.Println(row)
 		}
-		fmt.Println(result)
-		fmt.Println(outputFile)
+		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)
 	} else {

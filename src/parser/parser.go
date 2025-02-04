@@ -291,7 +291,7 @@ func parseExpression(pos *int, tokens []tokenizer.Token, list []string, allow bo
 		}
 	}
 	if peek(pos, tokens).Type != "end" && !contains(list, peek(pos, tokens).Text) && peek(pos, tokens).Text != strconv.FormatBool(allow) {
-		return nil
+		panic("Unexpected token: " + peek(pos, tokens).Text)
 	}
 	return left
 }

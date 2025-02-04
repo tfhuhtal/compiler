@@ -32,7 +32,7 @@ func Tokenize(sourceCode string, file string) []Token {
 	tokenPatterns := map[TokenType]*regexp.Regexp{
 		IntLiteral:  regexp.MustCompile(`^\d+`),
 		Operator:    regexp.MustCompile(`^(==|!=|<=|>=|[+\-*/=<>])`),
-		Punctuation: regexp.MustCompile(`^[(),{};]`),
+		Punctuation: regexp.MustCompile(`^[(),{};:]`),
 		Identifier:  regexp.MustCompile(`^[a-zA-Z_]\w*`),
 	}
 
@@ -88,5 +88,12 @@ func Tokenize(sourceCode string, file string) []Token {
 		}
 	}
 
-	return tokens
+	return append(tokens, Token{
+		Text: "",
+		Type: "end",
+		Location: SourceLocation{
+			File:   file,
+			Line:   line,
+			Column: column + 1},
+	})
 }

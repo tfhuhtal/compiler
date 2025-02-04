@@ -32,29 +32,51 @@ type IfExpression struct {
 
 func (IfExpression) isExpression() {}
 
-type FunctionCall struct {
+type Function struct {
 	Name Expression
 	Args []Expression
 }
 
-func (FunctionCall) isExpression() {}
+func (Function) isExpression() {}
 
-type UnaryOp struct {
-	Op    string
-	Right Expression
+type BooleanLiteral struct {
+	Boolean string
 }
 
-func (UnaryOp) isExpression() {}
+func (BooleanLiteral) isExpression() {}
 
-type Assignment struct {
-	Left 	Expression
-	Right	Expression
+type Unary struct {
+	Ops []string
+	Exp Expression
 }
 
-func (Assignment) isExpression() {}
+func (Unary) isExpression() {}
 
 type Block struct {
 	Expressions []Expression
+	Result      Expression
 }
 
 func (Block) isExpression() {}
+
+type FunctionTypeExpression struct {
+	VariableTypes []Expression
+	ResultType    Expression
+}
+
+func (FunctionTypeExpression) isExpression() {}
+
+type Declaration struct {
+	Variable Expression
+	Value    Expression
+	Typed    Expression
+}
+
+func (Declaration) isExpression() {}
+
+type WhileLoop struct {
+	Condition Expression
+	Looping   Expression
+}
+
+func (WhileLoop) isExpression() {}

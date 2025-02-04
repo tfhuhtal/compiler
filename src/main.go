@@ -24,12 +24,10 @@ type Result struct {
 	Error   string `json:"error,omitempty"`
 }
 
-func callCompiler(sourceCode string, file string) ast.Expression {
+func callCompiler(sourceCode string, file string) []ast.Expression {
 	tokens := tokenizer.Tokenize(sourceCode, file)
-	exp, err := parser.Parse(tokens)
-	if err != nil {
-		fmt.Println("Error: ", err)
-	}
+	fmt.Println(tokens)
+	exp := parser.Parse(tokens)
 	return exp
 }
 
@@ -124,7 +122,10 @@ func main() {
 	}
 
 	if command == "compile" {
-		result := callCompiler("{f(a);\nx = y;\nf(x)}", inputFile)
+		result := callCompiler("a = b", inputFile)
+		for _, row := range result {
+			fmt.Println(row)
+		}
 		fmt.Println(result)
 		fmt.Println(outputFile)
 	} else if command == "serve" {

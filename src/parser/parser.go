@@ -3,9 +3,13 @@ package parser
 import (
 	"compiler/src/ast"
 	"compiler/src/tokenizer"
-	"fmt"
 	"strconv"
 )
+
+type Parser struct {
+	Tokens []tokenizer.Token
+	Pos    *int
+}
 
 var precedenceLevels = [][]string{
 	{"or"},
@@ -93,7 +97,6 @@ func parseIntLiteral(pos *int, tokens []tokenizer.Token) ast.Literal {
 	consumedToken := consume(pos, tokens, nil)
 	value, err := strconv.Atoi(consumedToken.Text)
 	if err != nil {
-		fmt.Println(err)
 	}
 	return ast.Literal{Value: value}
 }
@@ -101,10 +104,12 @@ func parseIntLiteral(pos *int, tokens []tokenizer.Token) ast.Literal {
 func parseIdentifier(pos *int, tokens []tokenizer.Token) ast.Identifier {
 	token := peek(pos, tokens)
 	if token.Type != "Identifier" {
-		return ast.Identifier{}
+		panic("Not identifier")
 	}
 	consumedToken := consume(pos, tokens, nil)
-	return ast.Identifier{Name: consumedToken.Text}
+	return ast.Identifier{
+		Name: consumedToken.Text,
+	}
 }
 
 func parseParenthesised(pos *int, tokens []tokenizer.Token, list []string, allow bool) ast.Expression {
@@ -167,14 +172,7 @@ func parseWhileLoop(pos *int, tokens []tokenizer.Token) ast.Expression {
 
 func parseTerm(pos *int, tokens []tokenizer.Token, list []string, allow bool) ast.Expression {
 	left := parseUnary(pos, tokens, list, allow)
-	if peek(pos, tokens).Text == "(" {
-		args := parseFunction(pos, tokens, list, allow)
-		left = ast.Function{
-			Name: left,
-			Args: args,
-		}
-	}
-	for peek(pos, tokens).Text == "*" || peek(pos, tokens).Text == "/" {
+	for peek(pos, tokens).Text == "*" || peek(pos, tokens).Text == "/" || peek(pos, tokens).Text == "%" {
 		operatorToken := consume(pos, tokens, nil)
 		operator := operatorToken.Text
 		right := parseUnary(pos, tokens, list, allow)
@@ -214,27 +212,31 @@ func parseTermPrecedence(pos *int, tokens []tokenizer.Token, precedence int, lis
 
 func parseFactor(pos *int, tokens []tokenizer.Token, list []string, allow bool) ast.Expression {
 	token := peek(pos, tokens)
+	var res ast.Expression
 	if token.Text == "{" {
-		return parseBlock(pos, tokens)
+		res = parseBlock(pos, tokens)
 	} else if token.Text == "(" {
-		return parseParenthesised(pos, tokens, list, allow)
+		res = parseParenthesised(pos, tokens, list, allow)
 	} else if token.Text == "if" {
-		return parseIfExpression(pos, tokens, list, allow)
+		res = parseIfExpression(pos, tokens, list, allow)
 	} else if token.Text == "var" {
-		return nil
+		res = nil
 	} else if token.Text == "true" || token.Text == "false" {
-		return parseBooleanLiteral(pos, tokens)
+		res = parseBooleanLiteral(pos, tokens)
 	} else if token.Text == "while" {
-		return parseWhileLoop(pos, tokens)
+		res = parseWhileLoop(pos, tokens)
 	} else if token.Type == "IntLiteral" {
-		return parseIntLiteral(pos, tokens)
+		res = parseIntLiteral(pos, tokens)
 	} else if token.Type == "Identifier" {
-		return parseIdentifier(pos, tokens)
+		res = parseIdentifier(pos, tokens)
 	}
-	return ast.Identifier{}
+	if peek(pos, tokens).Text == "(" {
+		res = parseFunction(pos, tokens, list, allow, res)
+	}
+	return res
 }
 
-func parseFunction(pos *int, tokens []tokenizer.Token, list []string, allow bool) []ast.Expression {
+func parseFunction(pos *int, tokens []tokenizer.Token, list []string, allow bool, callee ast.Expression) ast.Expression {
 	var args []ast.Expression
 	consume(pos, tokens, "(")
 	exprs := parseExpression(pos, tokens, append([]string{",", ")"}, list...), allow)
@@ -245,7 +247,10 @@ func parseFunction(pos *int, tokens []tokenizer.Token, list []string, allow bool
 		args = append(args, exprs)
 	}
 	consume(pos, tokens, ")")
-	return args
+	return ast.Function{
+		Name: callee,
+		Args: args,
+	}
 }
 
 func parseTopExpression(pos *int, tokens []tokenizer.Token, list []string, allow bool) ast.Expression {
@@ -290,9 +295,6 @@ func parseExpression(pos *int, tokens []tokenizer.Token, list []string, allow bo
 			Left:  left,
 		}
 	}
-	if peek(pos, tokens).Type != "end" && !contains(list, peek(pos, tokens).Text) && peek(pos, tokens).Text != strconv.FormatBool(allow) {
-		panic("Unexpected token: " + peek(pos, tokens).Text)
-	}
 	return left
 }
 
@@ -324,29 +326,28 @@ func parseBlock(pos *int, tokens []tokenizer.Token) ast.Expression {
 	var res ast.Expression = nil
 	if peek(pos, tokens).Text != "}" {
 		line := parseTopExpression(pos, tokens, []string{";", "}"}, true)
-		if peek(pos, tokens).Text != "}" && peek(pos, tokens).Text != ";" && line != nil && peekPrev(pos, tokens).Text != "}" {
-			return nil
-		}
 		if peek(pos, tokens).Text != "}" {
 			for peek(pos, tokens).Text == ";" || line != nil || peekPrev(pos, tokens).Text == "}" {
 				consume(pos, tokens, ";")
-				seq = append(seq, line)
-
 				if peek(pos, tokens).Text == "}" {
-					res = line
+					if peekPrev(pos, tokens).Text == ";" {
+						seq = append(seq, line)
+						res = ast.Literal{
+							Value: nil,
+						}
+					} else {
+						res = line
+					}
 					break
 				}
+				seq = append(seq, line)
+				line = parseTopExpression(pos, tokens, []string{";", "}"}, true)
 			}
 		} else {
 			res = line
 		}
 	}
 	consume(pos, tokens, "}")
-	if res == nil {
-		res = ast.Literal{
-			Value: nil,
-		}
-	}
 	return ast.Block{
 		Expressions: seq,
 		Result:      res,

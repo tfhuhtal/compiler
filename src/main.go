@@ -126,7 +126,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		result := callCompiler("while n > 1 do {if n % 2 == 0 then {n = n / 2;} else { n = 3*n + 1;}print_int(n);}", inputFile)
+		result := callCompiler("var n: Int = read_int();print_int(n);while n > 1 do {if n % 2 == 0 then {n = n / 2;} else {n = 3*n + 1;}print_int(n);}", inputFile)
 		for _, row := range result {
 			fmt.Println(row)
 		}

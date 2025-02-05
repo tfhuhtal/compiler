@@ -88,12 +88,5 @@ func Tokenize(sourceCode string, file string) []Token {
 		}
 	}
 
-	return append(tokens, Token{
-		Text: "",
-		Type: "end",
-		Location: SourceLocation{
-			File:   file,
-			Line:   line,
-			Column: column + 1},
-	})
+	return tokens
 }

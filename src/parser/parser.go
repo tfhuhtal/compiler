@@ -104,14 +104,17 @@ func (p *Parser) consume(expected interface{}) tokenizer.Token {
 func (p *Parser) parseIntLiteral() ast.Literal {
 	token := p.peek()
 	if token.Type != "IntLiteral" {
-		return ast.Literal{}
+		panic("Not int literal")
 	}
 	consumedToken := p.consume(nil)
 	value, err := strconv.Atoi(consumedToken.Text)
 	if err != nil {
 		panic(err)
 	}
-	return ast.Literal{Value: value}
+	return ast.Literal{
+		Location: consumedToken.Location,
+		Value:    value,
+	}
 }
 
 func (p *Parser) parseIdentifier() ast.Identifier {
@@ -121,7 +124,8 @@ func (p *Parser) parseIdentifier() ast.Identifier {
 	}
 	consumedToken := p.consume(nil)
 	return ast.Identifier{
-		Name: consumedToken.Text,
+		Location: consumedToken.Location,
+		Name:     consumedToken.Text,
 	}
 }
 
@@ -133,6 +137,7 @@ func (p *Parser) parseParenthesised(list []string, allow bool) ast.Expression {
 }
 
 func (p *Parser) parseIfExpression(list []string, allow bool) ast.Expression {
+	loc := p.peek().Location
 	p.consume("if")
 	condition := p.parseExpression(list, allow)
 	p.consume("then")
@@ -143,6 +148,7 @@ func (p *Parser) parseIfExpression(list []string, allow bool) ast.Expression {
 		elseExpr = p.parseExpression(list, allow)
 	}
 	return ast.IfExpression{
+		Location:  loc,
 		Condition: condition,
 		Then:      thenExpr,
 		Else:      elseExpr,
@@ -152,7 +158,8 @@ func (p *Parser) parseIfExpression(list []string, allow bool) ast.Expression {
 func (p *Parser) parseBooleanLiteral() ast.BooleanLiteral {
 	token := p.consume(nil)
 	return ast.BooleanLiteral{
-		Boolean: token.Text,
+		Location: token.Location,
+		Boolean:  token.Text,
 	}
 }
 
@@ -165,19 +172,22 @@ func (p *Parser) parseUnary(list []string, allow bool) ast.Expression {
 	factor := p.parseFactor(list, allow)
 	if len(operators) > 0 {
 		factor = ast.Unary{
-			Ops: operators,
-			Exp: factor,
+			Location: token.Location,
+			Ops:      operators,
+			Exp:      factor,
 		}
 	}
 	return factor
 }
 
 func (p *Parser) parseWhileLoop() ast.Expression {
+	loc := p.peek().Location
 	p.consume("while")
 	condition := p.parseExpression([]string{"do"}, false)
 	p.consume("do")
 	looping := p.parseExpression([]string{}, false)
 	return ast.WhileLoop{
+		Location:  loc,
 		Condition: condition,
 		Looping:   looping,
 	}
@@ -190,9 +200,10 @@ func (p *Parser) parseTerm(list []string, allow bool) ast.Expression {
 		operator := operatorToken.Text
 		right := p.parseUnary(list, allow)
 		left = ast.BinaryOp{
-			Left:  left,
-			Op:    operator,
-			Right: right,
+			Location: left.GetLocation(),
+			Left:     left,
+			Op:       operator,
+			Right:    right,
 		}
 	}
 	return left
@@ -215,9 +226,10 @@ func (p *Parser) parseTermPrecedence(precedence int, list []string, allow bool) 
 			right = p.parseTermPrecedence(precedence+1, list, allow)
 		}
 		left = ast.BinaryOp{
-			Left:  left,
-			Op:    operator,
-			Right: right,
+			Location: left.GetLocation(),
+			Left:     left,
+			Op:       operator,
+			Right:    right,
 		}
 	}
 	return left
@@ -242,7 +254,7 @@ func (p *Parser) parseFactor(list []string, allow bool) ast.Expression {
 		res = p.parseIntLiteral()
 	} else if token.Type == "Identifier" {
 		if p.peekPrev().Type == "Identifier" && !contains(allowedIdentifiers, p.peekPrev().Text) {
-			panic("Not allowed")
+			panic("Not allowed Identifier: " + p.peekPrev().Text)
 		}
 		res = p.parseIdentifier()
 	}
@@ -254,6 +266,7 @@ func (p *Parser) parseFactor(list []string, allow bool) ast.Expression {
 
 func (p *Parser) parseFunction(list []string, allow bool, callee ast.Expression) ast.Expression {
 	var args []ast.Expression
+	loc := p.peek().Location
 	p.consume("(")
 	exprs := p.parseExpression(append([]string{",", ")"}, list...), allow)
 	args = append(args, exprs)
@@ -264,8 +277,9 @@ func (p *Parser) parseFunction(list []string, allow bool, callee ast.Expression)
 	}
 	p.consume(")")
 	return ast.Function{
-		Name: callee,
-		Args: args,
+		Location: loc,
+		Name:     callee,
+		Args:     args,
 	}
 }
 
@@ -279,6 +293,7 @@ func (p *Parser) parseTopExpression(list []string, allow bool) ast.Expression {
 			p.consume("=")
 			declVal := p.parseExpression(list, allow)
 			return ast.Declaration{
+				Location: decl.GetLocation(),
 				Variable: decl,
 				Value:    declVal,
 				Typed:    typed,
@@ -296,9 +311,10 @@ func (p *Parser) parseExpression(list []string, allow bool) ast.Expression {
 		operator := operatorToken.Text
 		right := p.parseTermPrecedence(precedence+1, list, allow)
 		left = ast.BinaryOp{
-			Right: right,
-			Op:    operator,
-			Left:  left,
+			Location: left.GetLocation(),
+			Right:    right,
+			Op:       operator,
+			Left:     left,
 		}
 	}
 	if p.peek().Text == "=" {
@@ -306,9 +322,10 @@ func (p *Parser) parseExpression(list []string, allow bool) ast.Expression {
 		operator := operatorToken.Text
 		right := p.parseExpression(list, allow)
 		left = ast.BinaryOp{
-			Right: right,
-			Op:    operator,
-			Left:  left,
+			Location: left.GetLocation(),
+			Right:    right,
+			Op:       operator,
+			Left:     left,
 		}
 	}
 	if !contains(allowedIdentifiers, p.peekPrev().Text) && p.peekPrev().Type == "Identifier" && p.peek().Type == "Identifier" {
@@ -331,6 +348,7 @@ func (p *Parser) parseTypeExpression() ast.Expression {
 		p.consume("=>")
 		res := p.parseTypeExpression()
 		return ast.FunctionTypeExpression{
+			Location:      p.peek().Location,
 			VariableTypes: params,
 			ResultType:    res,
 		}
@@ -340,6 +358,7 @@ func (p *Parser) parseTypeExpression() ast.Expression {
 }
 
 func (p *Parser) parseBlock() ast.Expression {
+	loc := p.peek().Location
 	p.consume("{")
 	var seq []ast.Expression
 	var res ast.Expression = nil
@@ -352,7 +371,8 @@ func (p *Parser) parseBlock() ast.Expression {
 					if p.peekPrev().Text == ";" {
 						seq = append(seq, line)
 						res = ast.Literal{
-							Value: nil,
+							Location: p.peek().Location,
+							Value:    nil,
 						}
 					} else {
 						res = line
@@ -368,6 +388,7 @@ func (p *Parser) parseBlock() ast.Expression {
 	}
 	p.consume("}")
 	return ast.Block{
+		Location:    loc,
 		Expressions: seq,
 		Result:      res,
 	}

@@ -25,7 +25,7 @@ go test ./src/...
 ```
 Or run a specific test
 ```bash
-go test -v ./src/parsern
+go test -v ./src/parser
 ```
 
 ## Running

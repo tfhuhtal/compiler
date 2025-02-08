@@ -7,8 +7,8 @@ import (
 )
 
 type Parser struct {
-	Tokens []tokenizer.Token
-	Pos    *int
+	tokens []tokenizer.Token
+	pos    int
 }
 
 var precedenceLevels = [][]string{
@@ -17,6 +17,18 @@ var precedenceLevels = [][]string{
 	{"==", "!=", "<", "<=", ">", ">="},
 	{"+", "-"},
 	{"*", "/", "%"},
+}
+
+var allowedIdentifiers = []string{
+	"var",
+	"if",
+	"else",
+	"then",
+	"while",
+	"do",
+	"not",
+	"true",
+	"false",
 }
 
 func contains(slice []string, item string) bool {
@@ -28,10 +40,10 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-func peek(pos *int, tokens []tokenizer.Token) tokenizer.Token {
-	if *pos < len(tokens) {
-		return tokens[*pos]
-	} else if len(tokens) == 0 {
+func (p *Parser) peek() tokenizer.Token {
+	if p.pos < len(p.tokens) {
+		return p.tokens[p.pos]
+	} else if len(p.tokens) == 0 {
 		return tokenizer.Token{
 			Location: tokenizer.SourceLocation{File: "", Line: 1, Column: 1},
 			Type:     "end",
@@ -40,29 +52,29 @@ func peek(pos *int, tokens []tokenizer.Token) tokenizer.Token {
 	}
 	// If we're at or past the end, return an "end" token.
 	return tokenizer.Token{
-		Location: tokens[len(tokens)-1].Location,
+		Location: p.tokens[len(p.tokens)-1].Location,
 		Type:     "end",
 		Text:     "",
 	}
 }
 
-func peekPrev(pos *int, tokens []tokenizer.Token) tokenizer.Token {
-	if *pos-1 >= 0 {
-		return tokens[*pos-1]
+func (p *Parser) peekPrev() tokenizer.Token {
+	if p.pos-1 >= 0 {
+		return p.tokens[p.pos-1]
 	} else {
 		return tokenizer.Token{
-			Location: tokens[len(tokens)-1].Location,
+			Location: p.tokens[len(p.tokens)-1].Location,
 			Type:     "end",
 			Text:     "",
 		}
 	}
 }
 
-func consume(pos *int, tokens []tokenizer.Token, expected interface{}) tokenizer.Token {
-	token := peek(pos, tokens)
+func (p *Parser) consume(expected interface{}) tokenizer.Token {
+	token := p.peek()
 
 	if expected == nil {
-		*pos++
+		p.pos++
 		return token
 	}
 
@@ -85,49 +97,50 @@ func consume(pos *int, tokens []tokenizer.Token, expected interface{}) tokenizer
 		}
 	}
 
-	*pos++
+	p.pos++
 	return token
 }
 
-func parseIntLiteral(pos *int, tokens []tokenizer.Token) ast.Literal {
-	token := peek(pos, tokens)
+func (p *Parser) parseIntLiteral() ast.Literal {
+	token := p.peek()
 	if token.Type != "IntLiteral" {
 		return ast.Literal{}
 	}
-	consumedToken := consume(pos, tokens, nil)
+	consumedToken := p.consume(nil)
 	value, err := strconv.Atoi(consumedToken.Text)
 	if err != nil {
+		panic(err)
 	}
 	return ast.Literal{Value: value}
 }
 
-func parseIdentifier(pos *int, tokens []tokenizer.Token) ast.Identifier {
-	token := peek(pos, tokens)
+func (p *Parser) parseIdentifier() ast.Identifier {
+	token := p.peek()
 	if token.Type != "Identifier" {
 		panic("Not identifier")
 	}
-	consumedToken := consume(pos, tokens, nil)
+	consumedToken := p.consume(nil)
 	return ast.Identifier{
 		Name: consumedToken.Text,
 	}
 }
 
-func parseParenthesised(pos *int, tokens []tokenizer.Token, list []string, allow bool) ast.Expression {
-	consume(pos, tokens, "(")
-	expr := parseExpression(pos, tokens, append([]string{")"}, list...), allow)
-	consume(pos, tokens, ")")
+func (p *Parser) parseParenthesised(list []string, allow bool) ast.Expression {
+	p.consume("(")
+	expr := p.parseExpression(append([]string{")"}, list...), allow)
+	p.consume(")")
 	return expr
 }
 
-func parseIfExpression(pos *int, tokens []tokenizer.Token, list []string, allow bool) ast.Expression {
-	consume(pos, tokens, "if")
-	condition := parseExpression(pos, tokens, list, allow)
-	consume(pos, tokens, "then")
-	thenExpr := parseExpression(pos, tokens, list, allow)
+func (p *Parser) parseIfExpression(list []string, allow bool) ast.Expression {
+	p.consume("if")
+	condition := p.parseExpression(list, allow)
+	p.consume("then")
+	thenExpr := p.parseExpression(list, allow)
 	var elseExpr ast.Expression
-	if peek(pos, tokens).Text == "else" {
-		consume(pos, tokens, "else")
-		elseExpr = parseExpression(pos, tokens, list, allow)
+	if p.peek().Text == "else" {
+		p.consume("else")
+		elseExpr = p.parseExpression(list, allow)
 	}
 	return ast.IfExpression{
 		Condition: condition,
@@ -136,20 +149,20 @@ func parseIfExpression(pos *int, tokens []tokenizer.Token, list []string, allow 
 	}
 }
 
-func parseBooleanLiteral(pos *int, tokens []tokenizer.Token) ast.BooleanLiteral {
-	token := consume(pos, tokens, nil)
+func (p *Parser) parseBooleanLiteral() ast.BooleanLiteral {
+	token := p.consume(nil)
 	return ast.BooleanLiteral{
 		Boolean: token.Text,
 	}
 }
 
-func parseUnary(pos *int, tokens []tokenizer.Token, list []string, allow bool) ast.Expression {
-	token := peek(pos, tokens)
+func (p *Parser) parseUnary(list []string, allow bool) ast.Expression {
+	token := p.peek()
 	var operators []string
 	for token.Text == "not" || token.Text == "-" {
 		operators = append(operators, token.Text)
 	}
-	factor := parseFactor(pos, tokens, list, allow)
+	factor := p.parseFactor(list, allow)
 	if len(operators) > 0 {
 		factor = ast.Unary{
 			Ops: operators,
@@ -159,23 +172,23 @@ func parseUnary(pos *int, tokens []tokenizer.Token, list []string, allow bool) a
 	return factor
 }
 
-func parseWhileLoop(pos *int, tokens []tokenizer.Token) ast.Expression {
-	consume(pos, tokens, "while")
-	condition := parseExpression(pos, tokens, []string{"do"}, false)
-	consume(pos, tokens, "do")
-	looping := parseExpression(pos, tokens, []string{}, false)
+func (p *Parser) parseWhileLoop() ast.Expression {
+	p.consume("while")
+	condition := p.parseExpression([]string{"do"}, false)
+	p.consume("do")
+	looping := p.parseExpression([]string{}, false)
 	return ast.WhileLoop{
 		Condition: condition,
 		Looping:   looping,
 	}
 }
 
-func parseTerm(pos *int, tokens []tokenizer.Token, list []string, allow bool) ast.Expression {
-	left := parseUnary(pos, tokens, list, allow)
-	for peek(pos, tokens).Text == "*" || peek(pos, tokens).Text == "/" || peek(pos, tokens).Text == "%" {
-		operatorToken := consume(pos, tokens, nil)
+func (p *Parser) parseTerm(list []string, allow bool) ast.Expression {
+	left := p.parseUnary(list, allow)
+	for p.peek().Text == "*" || p.peek().Text == "/" || p.peek().Text == "%" {
+		operatorToken := p.consume(nil)
 		operator := operatorToken.Text
-		right := parseUnary(pos, tokens, list, allow)
+		right := p.parseUnary(list, allow)
 		left = ast.BinaryOp{
 			Left:  left,
 			Op:    operator,
@@ -185,21 +198,21 @@ func parseTerm(pos *int, tokens []tokenizer.Token, list []string, allow bool) as
 	return left
 }
 
-func parseTermPrecedence(pos *int, tokens []tokenizer.Token, precedence int, list []string, allow bool) ast.Expression {
+func (p *Parser) parseTermPrecedence(precedence int, list []string, allow bool) ast.Expression {
 	var left ast.Expression
 	if precedence == len(precedenceLevels)-1 {
-		left = parseTerm(pos, tokens, list, allow)
+		left = p.parseTerm(list, allow)
 	} else {
-		left = parseTermPrecedence(pos, tokens, precedence+1, list, allow)
+		left = p.parseTermPrecedence(precedence+1, list, allow)
 	}
-	for contains(precedenceLevels[precedence], peek(pos, tokens).Text) {
-		operatorToken := consume(pos, tokens, nil)
+	for contains(precedenceLevels[precedence], p.peek().Text) {
+		operatorToken := p.consume(nil)
 		operator := operatorToken.Text
 		var right ast.Expression
 		if precedence == len(precedenceLevels)-1 {
-			right = parseTerm(pos, tokens, list, allow)
+			right = p.parseTerm(list, allow)
 		} else {
-			right = parseTermPrecedence(pos, tokens, precedence+1, list, allow)
+			right = p.parseTermPrecedence(precedence+1, list, allow)
 		}
 		left = ast.BinaryOp{
 			Left:  left,
@@ -210,58 +223,61 @@ func parseTermPrecedence(pos *int, tokens []tokenizer.Token, precedence int, lis
 	return left
 }
 
-func parseFactor(pos *int, tokens []tokenizer.Token, list []string, allow bool) ast.Expression {
-	token := peek(pos, tokens)
+func (p *Parser) parseFactor(list []string, allow bool) ast.Expression {
+	token := p.peek()
 	var res ast.Expression
 	if token.Text == "{" {
-		res = parseBlock(pos, tokens)
+		res = p.parseBlock()
 	} else if token.Text == "(" {
-		res = parseParenthesised(pos, tokens, list, allow)
+		res = p.parseParenthesised(list, allow)
 	} else if token.Text == "if" {
-		res = parseIfExpression(pos, tokens, list, allow)
+		res = p.parseIfExpression(list, allow)
 	} else if token.Text == "var" {
 		res = nil
 	} else if token.Text == "true" || token.Text == "false" {
-		res = parseBooleanLiteral(pos, tokens)
+		res = p.parseBooleanLiteral()
 	} else if token.Text == "while" {
-		res = parseWhileLoop(pos, tokens)
+		res = p.parseWhileLoop()
 	} else if token.Type == "IntLiteral" {
-		res = parseIntLiteral(pos, tokens)
+		res = p.parseIntLiteral()
 	} else if token.Type == "Identifier" {
-		res = parseIdentifier(pos, tokens)
+		if p.peekPrev().Type == "Identifier" && !contains(allowedIdentifiers, p.peekPrev().Text) {
+			panic("Not allowed")
+		}
+		res = p.parseIdentifier()
 	}
-	if peek(pos, tokens).Text == "(" {
-		res = parseFunction(pos, tokens, list, allow, res)
+	if p.peek().Text == "(" {
+		res = p.parseFunction(list, allow, res)
 	}
 	return res
 }
 
-func parseFunction(pos *int, tokens []tokenizer.Token, list []string, allow bool, callee ast.Expression) ast.Expression {
+func (p *Parser) parseFunction(list []string, allow bool, callee ast.Expression) ast.Expression {
 	var args []ast.Expression
-	consume(pos, tokens, "(")
-	exprs := parseExpression(pos, tokens, append([]string{",", ")"}, list...), allow)
+	p.consume("(")
+	exprs := p.parseExpression(append([]string{",", ")"}, list...), allow)
 	args = append(args, exprs)
-	for peek(pos, tokens).Text == "," {
-		consume(pos, tokens, ",")
-		exprs = parseExpression(pos, tokens, append([]string{",", ")"}, list...), allow)
+	for p.peek().Text == "," {
+		p.consume(",")
+		exprs = p.parseExpression(append([]string{",", ")"}, list...), allow)
 		args = append(args, exprs)
 	}
-	consume(pos, tokens, ")")
+	p.consume(")")
 	return ast.Function{
 		Name: callee,
 		Args: args,
 	}
 }
 
-func parseTopExpression(pos *int, tokens []tokenizer.Token, list []string, allow bool) ast.Expression {
-	if peek(pos, tokens).Text == "var" {
-		consume(pos, tokens, "var")
-		decl := parseExpression(pos, tokens, append([]string{":"}, list...), allow)
-		if peek(pos, tokens).Text == ":" {
-			consume(pos, tokens, ":")
-			typed := parseTypeExpression(pos, tokens)
-			consume(pos, tokens, "=")
-			declVal := parseExpression(pos, tokens, list, allow)
+func (p *Parser) parseTopExpression(list []string, allow bool) ast.Expression {
+	if p.peek().Text == "var" {
+		p.consume("var")
+		decl := p.parseExpression(append([]string{":"}, list...), allow)
+		if p.peek().Text == ":" {
+			p.consume(":")
+			typed := p.parseTypeExpression()
+			p.consume("=")
+			declVal := p.parseExpression(list, allow)
 			return ast.Declaration{
 				Variable: decl,
 				Value:    declVal,
@@ -269,68 +285,71 @@ func parseTopExpression(pos *int, tokens []tokenizer.Token, list []string, allow
 			}
 		}
 	}
-	return parseExpression(pos, tokens, list, allow)
+	return p.parseExpression(list, allow)
 }
 
-func parseExpression(pos *int, tokens []tokenizer.Token, list []string, allow bool) ast.Expression {
+func (p *Parser) parseExpression(list []string, allow bool) ast.Expression {
 	precedence := 0
-	left := parseTermPrecedence(pos, tokens, precedence+1, list, allow)
-	for contains(precedenceLevels[precedence], peek(pos, tokens).Text) {
-		operatorToken := consume(pos, tokens, nil)
+	left := p.parseTermPrecedence(precedence+1, list, allow)
+	for contains(precedenceLevels[precedence], p.peek().Text) {
+		operatorToken := p.consume(nil)
 		operator := operatorToken.Text
-		right := parseTermPrecedence(pos, tokens, precedence+1, list, allow)
+		right := p.parseTermPrecedence(precedence+1, list, allow)
 		left = ast.BinaryOp{
 			Right: right,
 			Op:    operator,
 			Left:  left,
 		}
 	}
-	if peek(pos, tokens).Text == "=" {
-		operatorToken := consume(pos, tokens, nil)
+	if p.peek().Text == "=" {
+		operatorToken := p.consume(nil)
 		operator := operatorToken.Text
-		right := parseExpression(pos, tokens, list, allow)
+		right := p.parseExpression(list, allow)
 		left = ast.BinaryOp{
 			Right: right,
 			Op:    operator,
 			Left:  left,
 		}
+	}
+	if !contains(allowedIdentifiers, p.peekPrev().Text) && p.peekPrev().Type == "Identifier" && p.peek().Type == "Identifier" {
+		panic("Not allowed expression: " + p.peekPrev().Text)
 	}
 	return left
 }
 
-func parseTypeExpression(pos *int, tokens []tokenizer.Token) ast.Expression {
-	if peek(pos, tokens).Text == "(" {
-		consume(pos, tokens, "(")
+func (p *Parser) parseTypeExpression() ast.Expression {
+	if p.peek().Text == "(" {
+		p.consume("(")
 		var params []ast.Expression
-		param := parseTypeExpression(pos, tokens)
+		param := p.parseTypeExpression()
 		params = append(params, param)
-		for peek(pos, tokens).Text == "," {
-			param = parseTypeExpression(pos, tokens)
+		for p.peek().Text == "," {
+			param = p.parseTypeExpression()
 			params = append(params, param)
 		}
-		consume(pos, tokens, ")")
-		consume(pos, tokens, "=>")
-		res := parseTypeExpression(pos, tokens)
+		p.consume(")")
+		p.consume("=>")
+		res := p.parseTypeExpression()
 		return ast.FunctionTypeExpression{
 			VariableTypes: params,
 			ResultType:    res,
 		}
 	} else {
-		return parseIdentifier(pos, tokens)
+		return p.parseIdentifier()
 	}
 }
 
-func parseBlock(pos *int, tokens []tokenizer.Token) ast.Expression {
-	consume(pos, tokens, "{")
+func (p *Parser) parseBlock() ast.Expression {
+	p.consume("{")
 	var seq []ast.Expression
 	var res ast.Expression = nil
-	if peek(pos, tokens).Text != "}" {
-		line := parseTopExpression(pos, tokens, []string{";", "}"}, true)
-		if peek(pos, tokens).Text != "}" {
-			for peek(pos, tokens).Text == ";" || line != nil || peekPrev(pos, tokens).Text == "}" {
-				consume(pos, tokens, ";")
-				if peek(pos, tokens).Text == "}" {
-					if peekPrev(pos, tokens).Text == ";" {
+	if p.peek().Text != "}" {
+		line := p.parseTopExpression([]string{";", "}"}, true)
+		if p.peek().Text != "}" {
+			for p.peek().Text == ";" || line != nil || p.peekPrev().Text == "}" {
+				p.consume(";")
+				if p.peek().Text == "}" {
+					if p.peekPrev().Text == ";" {
 						seq = append(seq, line)
 						res = ast.Literal{
 							Value: nil,
@@ -341,36 +360,39 @@ func parseBlock(pos *int, tokens []tokenizer.Token) ast.Expression {
 					break
 				}
 				seq = append(seq, line)
-				line = parseTopExpression(pos, tokens, []string{";", "}"}, true)
+				line = p.parseTopExpression([]string{";", "}"}, true)
 			}
 		} else {
 			res = line
 		}
 	}
-	consume(pos, tokens, "}")
+	p.consume("}")
 	return ast.Block{
 		Expressions: seq,
 		Result:      res,
 	}
 }
 
-func parseAll(pos *int, tokens []tokenizer.Token) []ast.Expression {
+func (p *Parser) parseAll() []ast.Expression {
 	var exprs []ast.Expression
-	top := parseTopExpression(pos, tokens, []string{";"}, false)
+	top := p.parseTopExpression([]string{";"}, false)
 	exprs = append(exprs, top)
-	for peek(pos, tokens).Text == ";" {
-		consume(pos, tokens, ";")
-		if peek(pos, tokens).Type == "end" {
+	for p.peek().Text == ";" {
+		p.consume(";")
+		if p.peek().Type == "end" {
 			break
 		}
-		top = parseTopExpression(pos, tokens, []string{";"}, false)
+		top = p.parseTopExpression([]string{";"}, false)
 		exprs = append(exprs, top)
 	}
 	return exprs
 }
 
-func Parse(tokens []tokenizer.Token) []ast.Expression {
-	pos := 0
-	expr := parseAll(&pos, tokens)
+func (p *Parser) Parse() []ast.Expression {
+	expr := p.parseAll()
 	return expr
+}
+
+func New(tokens []tokenizer.Token) *Parser {
+	return &Parser{tokens: tokens, pos: 0}
 }

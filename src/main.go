@@ -30,9 +30,10 @@ func callCompiler(sourceCode string, file string) []ast.Expression {
 	tokens := tokenizer.Tokenize(sourceCode, file)
 	fmt.Println(tokens)
 	fmt.Println("=================================================")
-	exp := parser.Parse(tokens)
-	fmt.Println(exp)
-	return exp
+	p := parser.New(tokens)
+	res := p.Parse()
+	fmt.Println(res)
+	return res
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -126,10 +127,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		result := callCompiler("var n: Int = read_int();print_int(n);while n > 1 do {if n % 2 == 0 then {n = n / 2;} else {n = 3*n + 1;}print_int(n);}", inputFile)
-		for _, row := range result {
-			fmt.Println(row)
-		}
+		callCompiler("var n: Int = read_int();print_int(n);while n > 1 do {if n % 2 == 0 then {n = n / 2;} else {n = 3*n + 1;}print_int(n);}", inputFile)
 		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

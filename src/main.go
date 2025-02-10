@@ -2,6 +2,7 @@ package main
 
 import (
 	"compiler/src/ast"
+	"compiler/src/interpreter"
 	"compiler/src/parser"
 	"compiler/src/tokenizer"
 	"encoding/json"
@@ -32,7 +33,8 @@ func callCompiler(sourceCode string, file string) []ast.Expression {
 	fmt.Println("=================================================")
 	p := parser.New(tokens)
 	res := p.Parse()
-	fmt.Println(res)
+	interpreted := interpreter.Interpret(res[0])
+	fmt.Println(interpreted)
 	return res
 }
 
@@ -127,7 +129,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		callCompiler("var n: Int = read_int();print_int(n);while n > 1 do {if n % 2 == 0 then {n = n / 2;} else {n = 3*n + 1;}print_int(n);}", inputFile)
+		callCompiler("2 + 3", inputFile)
 		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

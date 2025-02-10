@@ -6,13 +6,13 @@ import (
 
 type Value any
 
-func interpret(node ast.Expression) Value {
+func Interpret(node ast.Expression) Value {
 	switch n := node.(type) {
 	case ast.Literal:
 		return n.Value
 	case ast.BinaryOp:
-		a := interpret(n.Left)
-		b := interpret(n.Right)
+		a := Interpret(n.Left)
+		b := Interpret(n.Right)
 		if n.Op == "+" {
 			return a.(int) + b.(int)
 		} else if n.Op == "<" {
@@ -21,10 +21,15 @@ func interpret(node ast.Expression) Value {
 			panic("...")
 		}
 	case ast.IfExpression:
-		if interpret(n.Condition) {
-			return interpret(n.Then)
+		condition := Interpret(n.Condition)
+		if conditionBool, ok := condition.(bool); ok {
+			if conditionBool {
+				return Interpret(n.Then)
+			} else {
+				return Interpret(n.Else)
+			}
 		} else {
-			return interpret(n.Else)
+			panic("Condition is not a boolean")
 		}
 	default:
 		return nil

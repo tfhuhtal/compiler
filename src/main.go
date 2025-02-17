@@ -2,7 +2,6 @@ package main
 
 import (
 	"compiler/src/ast"
-	"compiler/src/interpreter"
 	"compiler/src/parser"
 	"compiler/src/tokenizer"
 	"encoding/json"
@@ -33,8 +32,6 @@ func callCompiler(sourceCode string, file string) []ast.Expression {
 	fmt.Println("=================================================")
 	p := parser.New(tokens)
 	res := p.Parse()
-	interpreted := interpreter.Interpret(res[0])
-	fmt.Println(interpreted)
 	return res
 }
 

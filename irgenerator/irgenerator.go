@@ -10,4 +10,4 @@ type IRVar struct {
 	name string
 }
 
-func Generate(rootTypes map[IRVar]utils.Type, rootExpr ast.Expression)
+func Generate(rootTypes map[IRVar]utils.Type, rootExpr ast.Expression) {}

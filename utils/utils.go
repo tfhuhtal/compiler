@@ -10,19 +10,20 @@ type Type interface {
 }
 
 type Int struct {
-	name string
+	Name string
 }
 
 func (Int) isType() {}
 
 type Bool struct {
-	name string
+	Name string
 }
 
 func (Bool) isType() {}
 
-type Unit struct {
-	name string
+type Fun struct {
+	Params []Type
+	Res    Type
 }
 
-func (Unit) isType() {}
+func (Fun) isType() {}

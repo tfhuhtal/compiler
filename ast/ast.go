@@ -1,6 +1,6 @@
 package ast
 
-import "compiler/src/tokenizer"
+import "compiler/tokenizer"
 
 type Location = tokenizer.SourceLocation
 

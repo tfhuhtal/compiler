@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"compiler/src/ast"
-	"compiler/src/tokenizer"
+	"compiler/ast"
+	"compiler/tokenizer"
 	"strconv"
 )
 

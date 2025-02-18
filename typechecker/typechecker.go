@@ -1,8 +1,8 @@
 package typechecker
 
 import (
-	"compiler/src/ast"
-	"compiler/src/utils"
+	"compiler/ast"
+	"compiler/utils"
 	"fmt"
 )
 
@@ -11,7 +11,9 @@ func typecheck(node ast.Expression, symTab *utils.SymTab) utils.Type {
 	case ast.Literal:
 		_, ok := n.Value.(int)
 		if ok {
-			return utils.Int{}
+			return utils.Int{
+				Name: "Int",
+			}
 		} else {
 			panic("Unknown literal type")
 		}
@@ -27,7 +29,9 @@ func typecheck(node ast.Expression, symTab *utils.SymTab) utils.Type {
 			if !lok || !rok {
 				panic("Both left and right must be integers")
 			}
-			return utils.Int{}
+			return utils.Int{
+				Name: "Int",
+			}
 
 		case "<", ">", ">=", "<=":
 			_, lok := left.(utils.Int)
@@ -35,7 +39,9 @@ func typecheck(node ast.Expression, symTab *utils.SymTab) utils.Type {
 			if !lok || !rok {
 				panic("Both left and right must be integers")
 			}
-			return utils.Bool{}
+			return utils.Bool{
+				Name: "Int",
+			}
 
 		case "=":
 			if left != right {
@@ -84,6 +90,38 @@ func typecheck(node ast.Expression, symTab *utils.SymTab) utils.Type {
 				cur_scp = cur_scp.Parent
 			}
 		}
+
+	case ast.Unary:
+		value := typecheck(n.Exp, symTab)
+		return value
+
+	case ast.BooleanLiteral:
+		if n.Boolean == "true" || n.Boolean == "false" {
+			return utils.Bool{
+				Name: "Bool",
+			}
+		}
+
+	case ast.Function:
+		var params []utils.Type
+		for _, par := range n.Args {
+			params = append(params, typecheck(par, symTab))
+		}
+		res := typecheck(n.Name, symTab)
+		return utils.Fun{
+			Params: params,
+			Res:    res,
+		}
 	}
 	return nil
+}
+
+func Type(nodes []ast.Expression) any {
+	var tab utils.SymTab
+	var res []any
+
+	for _, node := range nodes {
+		res = append(res, typecheck(node, &tab))
+	}
+	return res
 }

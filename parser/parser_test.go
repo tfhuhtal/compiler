@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"compiler/src/tokenizer"
+	"compiler/tokenizer"
 	"testing"
 )
 

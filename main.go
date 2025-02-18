@@ -1,9 +1,9 @@
 package main
 
 import (
-	"compiler/src/ast"
-	"compiler/src/parser"
-	"compiler/src/tokenizer"
+	"compiler/parser"
+	"compiler/tokenizer"
+	"compiler/typechecker"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,7 +24,7 @@ type Result struct {
 	Error   string `json:"error,omitempty"`
 }
 
-func callCompiler(sourceCode string, file string) []ast.Expression {
+func callCompiler(sourceCode string, file string) any {
 	fmt.Println(sourceCode)
 	fmt.Println("=================================================")
 	tokens := tokenizer.Tokenize(sourceCode, file)
@@ -32,6 +32,7 @@ func callCompiler(sourceCode string, file string) []ast.Expression {
 	fmt.Println("=================================================")
 	p := parser.New(tokens)
 	res := p.Parse()
+	typechecker.Type(res)
 	return res
 }
 

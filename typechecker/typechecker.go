@@ -53,7 +53,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 				Name: "Int",
 			}
 
-		case "<", ">", ">=", "<=", "==", "!=":
+		case "<", ">", ">=", "<=":
 			_, lok := left.(utils.Int)
 			_, rok := right.(utils.Int)
 			if !lok || !rok {
@@ -63,7 +63,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 				Name: "Bool",
 			}
 
-		case "=":
+		case "=", "!=", "==":
 			if left != right {
 				panic(fmt.Sprintf("Both left %s and right %s must be same type", left, right))
 			}
@@ -121,6 +121,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 			}
 		}
 		n.Type = res
+		return res
 
 	case ast.Function:
 		var params []utils.Type

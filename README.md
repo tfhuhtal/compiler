@@ -21,11 +21,11 @@ go mod tidy
 
 Run all tests
 ```bash
-go test ./src/...
+go test ./...
 ```
 Or run a specific test
 ```bash
-go test -v ./src/parser
+go test -v ./parser
 ```
 
 ## Running

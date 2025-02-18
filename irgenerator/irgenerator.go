@@ -2,7 +2,7 @@ package irgenerator
 
 import (
 	"compiler/ast"
-	"compiler/typechecker"
+	"compiler/utils"
 )
 
 // represent the name of a memory location or built-in
@@ -10,4 +10,4 @@ type IRVar struct {
 	name string
 }
 
-func Generate(rootExpr ast.Expression)
+func Generate(rootTypes map[IRVar]utils.Type, rootExpr ast.Expression)

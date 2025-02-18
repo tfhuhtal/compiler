@@ -1,10 +1,5 @@
 package utils
 
-type SymTab struct {
-	Parent *SymTab
-	Table  map[any]any
-}
-
 type Type interface {
 	isType()
 }
@@ -27,3 +22,9 @@ type Fun struct {
 }
 
 func (Fun) isType() {}
+
+type Unit struct {
+	Name string
+}
+
+func (Unit) isType() {}

@@ -3,6 +3,7 @@ package parser
 import (
 	"compiler/ast"
 	"compiler/tokenizer"
+	"compiler/utils"
 	"strconv"
 )
 
@@ -114,6 +115,7 @@ func (p *Parser) parseIntLiteral() ast.Literal {
 	return ast.Literal{
 		Location: consumedToken.Location,
 		Value:    value,
+		Type:     utils.Unit{},
 	}
 }
 
@@ -126,6 +128,7 @@ func (p *Parser) parseIdentifier() ast.Identifier {
 	return ast.Identifier{
 		Location: consumedToken.Location,
 		Name:     consumedToken.Text,
+		Type:     utils.Unit{},
 	}
 }
 
@@ -152,6 +155,7 @@ func (p *Parser) parseIfExpression(list []string, allow bool) ast.Expression {
 		Condition: condition,
 		Then:      thenExpr,
 		Else:      elseExpr,
+		Type:      utils.Unit{},
 	}
 }
 
@@ -160,6 +164,7 @@ func (p *Parser) parseBooleanLiteral() ast.BooleanLiteral {
 	return ast.BooleanLiteral{
 		Location: token.Location,
 		Boolean:  token.Text,
+		Type:     utils.Unit{},
 	}
 }
 
@@ -175,6 +180,7 @@ func (p *Parser) parseUnary(list []string, allow bool) ast.Expression {
 			Location: token.Location,
 			Ops:      operators,
 			Exp:      factor,
+			Type:     utils.Unit{},
 		}
 	}
 	return factor
@@ -190,6 +196,7 @@ func (p *Parser) parseWhileLoop() ast.Expression {
 		Location:  loc,
 		Condition: condition,
 		Looping:   looping,
+		Type:      utils.Unit{},
 	}
 }
 
@@ -204,6 +211,7 @@ func (p *Parser) parseTerm(list []string, allow bool) ast.Expression {
 			Left:     left,
 			Op:       operator,
 			Right:    right,
+			Type:     utils.Unit{},
 		}
 	}
 	return left
@@ -230,6 +238,7 @@ func (p *Parser) parseTermPrecedence(precedence int, list []string, allow bool) 
 			Left:     left,
 			Op:       operator,
 			Right:    right,
+			Type:     utils.Unit{},
 		}
 	}
 	return left
@@ -280,6 +289,7 @@ func (p *Parser) parseFunction(list []string, allow bool, callee ast.Expression)
 		Location: loc,
 		Name:     callee,
 		Args:     args,
+		Type:     utils.Unit{},
 	}
 }
 
@@ -297,6 +307,7 @@ func (p *Parser) parseTopExpression(list []string, allow bool) ast.Expression {
 				Variable: decl,
 				Value:    declVal,
 				Typed:    typed,
+				Type:     utils.Unit{},
 			}
 		}
 	}
@@ -315,6 +326,7 @@ func (p *Parser) parseExpression(list []string, allow bool) ast.Expression {
 			Right:    right,
 			Op:       operator,
 			Left:     left,
+			Type:     utils.Unit{},
 		}
 	}
 	if p.peek().Text == "=" {
@@ -326,6 +338,7 @@ func (p *Parser) parseExpression(list []string, allow bool) ast.Expression {
 			Right:    right,
 			Op:       operator,
 			Left:     left,
+			Type:     utils.Unit{},
 		}
 	}
 	if !contains(allowedIdentifiers, p.peekPrev().Text) && p.peekPrev().Type == "Identifier" && p.peek().Type == "Identifier" {
@@ -351,6 +364,7 @@ func (p *Parser) parseTypeExpression() ast.Expression {
 			Location:      p.peek().Location,
 			VariableTypes: params,
 			ResultType:    res,
+			Type:          utils.Unit{},
 		}
 	} else {
 		return p.parseIdentifier()
@@ -373,6 +387,7 @@ func (p *Parser) parseBlock() ast.Expression {
 						res = ast.Literal{
 							Location: p.peek().Location,
 							Value:    nil,
+							Type:     utils.Unit{},
 						}
 					} else {
 						res = line
@@ -391,6 +406,7 @@ func (p *Parser) parseBlock() ast.Expression {
 		Location:    loc,
 		Expressions: seq,
 		Result:      res,
+		Type:        utils.Unit{},
 	}
 }
 

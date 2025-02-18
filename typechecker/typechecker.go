@@ -27,7 +27,6 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 				Name: "Int",
 			}
 		} else if n.Value == nil {
-			fmt.Println("Nil literal")
 			return utils.Unit{
 				Name: "Nil",
 			}
@@ -36,7 +35,6 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		}
 
 	case ast.BinaryOp:
-		fmt.Println("BinaryOp")
 		left := typecheck(n.Left, symTab)
 		right := typecheck(n.Right, symTab)
 
@@ -91,7 +89,6 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		return value
 
 	case ast.Identifier:
-		fmt.Println("Identifier", symTab.Table)
 		if value, exists := symTab.Table[n.Name]; exists {
 			return value
 		}

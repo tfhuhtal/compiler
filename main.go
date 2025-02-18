@@ -127,7 +127,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		callCompiler("{f(a);x = y;f(x)}", inputFile)
+		callCompiler("var n: Int = 2;print_int(n);while n > 1 do {if n % 2 == 0 then {n = n / 2;} else {n = 3*n + 1;}print_int(n);}", inputFile)
 		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

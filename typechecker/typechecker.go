@@ -8,27 +8,31 @@ import (
 
 type SymTab struct {
 	Parent *SymTab
-	Table  map[any]utils.Type
+	Table  map[string]utils.Type
 }
 
 func NewSymTab(parent *SymTab) SymTab {
 	return SymTab{
 		Parent: parent,
-		Table:  make(map[any]utils.Type),
+		Table:  make(map[string]utils.Type),
 	}
 }
 
 func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 	switch n := node.(type) {
 	case ast.Literal:
-		fmt.Println("Literal")
 		_, ok := n.Value.(int)
 		if ok {
 			return utils.Int{
 				Name: "Int",
 			}
+		} else if n.Value == nil {
+			fmt.Println("Nil literal")
+			return utils.Unit{
+				Name: "Nil",
+			}
 		} else {
-			panic("Unknown literal type")
+			panic(fmt.Sprintf("Unknown literal type %s at location", n.Value))
 		}
 
 	case ast.BinaryOp:
@@ -41,71 +45,62 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 			_, lok := left.(utils.Int)
 			_, rok := right.(utils.Int)
 			if !lok || !rok {
-				panic("Both left and right must be integers")
+				panic(fmt.Sprintf("Both left %s and right %s must be integers", left, right))
 			}
 			return utils.Int{
 				Name: "Int",
 			}
 
-		case "<", ">", ">=", "<=":
+		case "<", ">", ">=", "<=", "==", "!=":
 			_, lok := left.(utils.Int)
 			_, rok := right.(utils.Int)
 			if !lok || !rok {
-				panic("Both left and right must be integers")
+				panic(fmt.Sprintf("Both left %s and right %s must be integers", left, right))
 			}
 			return utils.Bool{
-				Name: "Int",
+				Name: "Bool",
 			}
 
 		case "=":
 			if left != right {
-				panic("Variables are not same type")
-			}
-			return left
-
-		case "==", "!=":
-			if left != right {
-				panic("variables are not same type")
+				panic(fmt.Sprintf("Both left %s and right %s must be same type", left, right))
 			}
 			return left
 		}
 
 	case ast.IfExpression:
-		fmt.Println("IfExpression")
 		condition := typecheck(n.Condition, symTab)
 		_, ok := condition.(utils.Bool)
 		if !ok {
-			panic("The condition is not boolean")
+			panic(fmt.Sprintf("%s condition is not boolean %v", condition, n))
 		}
 		then := typecheck(n.Then, symTab)
-		els := typecheck(n.Else, symTab)
-		if then != els {
-			panic("In if clause then and else are not same type")
-		}
+		typecheck(n.Else, symTab)
 		return then
 
 	case ast.Declaration:
-		fmt.Println("Declaration")
 		value := typecheck(n.Value, symTab)
-		if _, exists := symTab.Table[n.Variable]; exists {
+		var str string
+		if identifier, ok := n.Variable.(ast.Identifier); ok {
+			str = identifier.Name
+		}
+		if _, exists := symTab.Table[str]; exists {
 			panic(fmt.Sprintf("%s already declared", n.Variable))
 		}
-		symTab.Table[n.Variable] = value
+		symTab.Table[str] = value
 		return value
 
 	case ast.Identifier:
-		fmt.Println("Identifier")
-		if symTab != nil {
-			if value, exists := symTab.Table[n.Name]; exists {
-				return typecheck(value.(ast.Expression), symTab)
+		fmt.Println("Identifier", symTab.Table)
+		if value, exists := symTab.Table[n.Name]; exists {
+			return value
+		}
+		cur_scp := symTab.Parent
+		for cur_scp != nil {
+			if value, exists := cur_scp.Table[n.Name]; exists {
+				return value
 			}
-			cur_scp := symTab.Parent
-			for cur_scp != nil {
-				if value, exists := cur_scp.Table[n.Name]; exists {
-					return typecheck(value.(ast.Expression), symTab)
-				}
-				cur_scp = cur_scp.Parent
-			}
+			cur_scp = cur_scp.Parent
 		}
 
 	case ast.Unary:
@@ -120,7 +115,6 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		}
 
 	case ast.Function:
-		fmt.Println("Function")
 		var params []utils.Type
 		for _, par := range n.Args {
 			params = append(params, typecheck(par, symTab))
@@ -138,14 +132,17 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 			exprs = append(exprs, typecheck(expr, &tab))
 		}
 		res := typecheck(n.Result, &tab)
-		fmt.Println("Block", res)
 		return utils.Fun{
 			Params: exprs,
 			Res:    res,
 		}
 
 	case ast.WhileLoop:
-		return nil
+		cond := typecheck(n.Condition, symTab)
+		if _, ok := cond.(utils.Type); !ok {
+			panic(fmt.Sprintf("%s condition is not boolean", cond))
+		}
+		return typecheck(n.Looping, symTab)
 
 	case ast.FunctionTypeExpression:
 		return nil

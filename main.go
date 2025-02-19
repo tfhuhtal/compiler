@@ -1,9 +1,12 @@
 package main
 
 import (
+	"compiler/ir"
+	"compiler/irgenerator"
 	"compiler/parser"
 	"compiler/tokenizer"
 	"compiler/typechecker"
+	"compiler/utils"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -33,7 +36,21 @@ func callCompiler(sourceCode string, file string) any {
 	p := parser.New(tokens)
 	res := p.Parse()
 	typechecker.Type(res)
-	return res
+	fmt.Println(res)
+	fmt.Println("=================================================")
+	var rootTypes map[irgenerator.IRVar]utils.Type
+	var instructions []ir.Instruction
+
+	for _, expr := range res {
+		instructions = append(instructions, irgenerator.Generate(rootTypes, expr)...)
+	}
+
+	// Process the generated instructions as needed
+	for _, instr := range instructions {
+		fmt.Println(instr)
+	}
+
+	return instructions
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {

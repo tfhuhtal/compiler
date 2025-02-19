@@ -28,3 +28,15 @@ type Unit struct {
 }
 
 func (Unit) isType() {}
+
+type SymTab[T any] struct {
+	Parent *SymTab[T]
+	Table  map[string]T
+}
+
+func NewSymTab[T any](parent *SymTab[T]) *SymTab[T] {
+	return &SymTab[T]{
+		Parent: parent,
+		Table:  make(map[string]T),
+	}
+}

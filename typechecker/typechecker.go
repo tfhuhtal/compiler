@@ -6,17 +6,7 @@ import (
 	"fmt"
 )
 
-type SymTab struct {
-	Parent *SymTab
-	Table  map[string]utils.Type
-}
-
-func NewSymTab(parent *SymTab) SymTab {
-	return SymTab{
-		Parent: parent,
-		Table:  make(map[string]utils.Type),
-	}
-}
+type SymTab = utils.SymTab[utils.Type]
 
 func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 	switch n := node.(type) {
@@ -63,18 +53,26 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 				Name: "Bool",
 			}
 
-		case "=", "!=", "==":
+		case "=":
 			if left != right {
 				panic(fmt.Sprintf("Both left %s and right %s must be same type", left, right))
 			}
 			return left
+
+		case "!=", "==":
+			if left != right {
+				panic(fmt.Sprintf("Both left %s and right %s must be same type", left, right))
+			}
+			return utils.Bool{
+				Name: "Bool",
+			}
 		}
 
 	case ast.IfExpression:
 		condition := typecheck(n.Condition, symTab)
 		_, ok := condition.(utils.Bool)
 		if !ok {
-			panic(fmt.Sprintf("%s condition is not boolean %v", condition, n))
+			panic(fmt.Sprintf("%s condition is not boolean", condition))
 		}
 		then := typecheck(n.Then, symTab)
 		typecheck(n.Else, symTab)
@@ -137,11 +135,11 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 
 	case ast.Block:
 		var exprs []utils.Type
-		tab := NewSymTab(symTab)
+		tab := utils.NewSymTab[utils.Type](symTab)
 		for _, expr := range n.Expressions {
-			exprs = append(exprs, typecheck(expr, &tab))
+			exprs = append(exprs, typecheck(expr, tab))
 		}
-		res := typecheck(n.Result, &tab)
+		res := typecheck(n.Result, tab)
 		n.Type = res
 		return utils.Fun{
 			Params: exprs,
@@ -150,7 +148,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 
 	case ast.WhileLoop:
 		cond := typecheck(n.Condition, symTab)
-		if _, ok := cond.(utils.Type); !ok {
+		if _, ok := cond.(utils.Bool); !ok {
 			panic(fmt.Sprintf("%s condition is not boolean", cond))
 		}
 		n.Type = cond
@@ -163,11 +161,11 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 }
 
 func Type(nodes []ast.Expression) any {
-	tab := NewSymTab(nil)
+	tab := utils.NewSymTab[utils.Type](nil)
 	var res []any
 
 	for _, node := range nodes {
-		res = append(res, typecheck(node, &tab))
+		res = append(res, typecheck(node, tab))
 	}
 	return res
 }

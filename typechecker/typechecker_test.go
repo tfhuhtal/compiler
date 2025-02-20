@@ -10,7 +10,7 @@ import (
 
 func TestTypecheck(t *testing.T) {
 	t.Run("IntegerLiteral returns Int", func(t *testing.T) {
-		literal := ast.Literal{Value: 42}
+		literal := &ast.Literal{Value: 42}
 		symTab := utils.NewSymTab[utils.Type](nil)
 		got := typecheck(literal, symTab)
 		if _, ok := got.(utils.Int); !ok {
@@ -19,7 +19,7 @@ func TestTypecheck(t *testing.T) {
 	})
 
 	t.Run("BooleanLiteral returns Bool", func(t *testing.T) {
-		literal := ast.BooleanLiteral{Boolean: "true"}
+		literal := &ast.BooleanLiteral{Boolean: "true"}
 		symTab := utils.NewSymTab[utils.Type](nil)
 		got := typecheck(literal, symTab)
 		if _, ok := got.(utils.Bool); !ok {
@@ -27,9 +27,9 @@ func TestTypecheck(t *testing.T) {
 		}
 	})
 	t.Run("BinaryOp with Int operands returns Int", func(t *testing.T) {
-		left := ast.Literal{Value: 42}
-		right := ast.Literal{Value: 42}
-		binaryOp := ast.BinaryOp{Left: left, Op: "+", Right: right}
+		left := &ast.Literal{Value: 42}
+		right := &ast.Literal{Value: 42}
+		binaryOp := &ast.BinaryOp{Left: left, Op: "+", Right: right}
 		symTab := utils.NewSymTab[utils.Type](nil)
 		got := typecheck(binaryOp, symTab)
 		if _, ok := got.(utils.Int); !ok {
@@ -37,9 +37,9 @@ func TestTypecheck(t *testing.T) {
 		}
 	})
 	t.Run("BinaryOp with Bool operands returns Bool", func(t *testing.T) {
-		left := ast.BooleanLiteral{Boolean: "true"}
-		right := ast.BooleanLiteral{Boolean: "true"}
-		binaryOp := ast.BinaryOp{Left: left, Op: "==", Right: right}
+		left := &ast.BooleanLiteral{Boolean: "true"}
+		right := &ast.BooleanLiteral{Boolean: "true"}
+		binaryOp := &ast.BinaryOp{Left: left, Op: "==", Right: right}
 		symTab := utils.NewSymTab[utils.Type](nil)
 		got := typecheck(binaryOp, symTab)
 		if _, ok := got.(utils.Bool); !ok {
@@ -47,9 +47,9 @@ func TestTypecheck(t *testing.T) {
 		}
 	})
 	t.Run("BinaryOp with Int and Bool operands returns error", func(t *testing.T) {
-		left := ast.Literal{Value: 42}
-		right := ast.BooleanLiteral{Boolean: "true"}
-		binaryOp := ast.BinaryOp{Left: left, Op: "==", Right: right}
+		left := &ast.Literal{Value: 42}
+		right := &ast.BooleanLiteral{Boolean: "true"}
+		binaryOp := &ast.BinaryOp{Left: left, Op: "==", Right: right}
 		symTab := utils.NewSymTab[utils.Type](nil)
 		defer func() {
 			if r := recover(); r == nil {

@@ -10,7 +10,7 @@ type SymTab = utils.SymTab[utils.Type]
 
 func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 	switch n := node.(type) {
-	case ast.Literal:
+	case *ast.Literal:
 		var res utils.Type
 		_, ok := n.Value.(int)
 		if ok {
@@ -27,7 +27,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		n.Type = res
 		return res
 
-	case ast.BinaryOp:
+	case *ast.BinaryOp:
 		left := typecheck(n.Left, symTab)
 		right := typecheck(n.Right, symTab)
 		n.Type = left
@@ -68,7 +68,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 			}
 		}
 
-	case ast.IfExpression:
+	case *ast.IfExpression:
 		condition := typecheck(n.Condition, symTab)
 		_, ok := condition.(utils.Bool)
 		if !ok {
@@ -79,7 +79,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		n.Type = then
 		return then
 
-	case ast.Declaration:
+	case *ast.Declaration:
 		value := typecheck(n.Value, symTab)
 		var str string
 		if identifier, ok := n.Variable.(ast.Identifier); ok {
@@ -92,7 +92,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		n.Type = value
 		return value
 
-	case ast.Identifier:
+	case *ast.Identifier:
 		if value, exists := symTab.Table[n.Name]; exists {
 			n.Type = value
 			return value
@@ -106,12 +106,12 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 			cur_scp = cur_scp.Parent
 		}
 
-	case ast.Unary:
+	case *ast.Unary:
 		value := typecheck(n.Exp, symTab)
 		n.Type = value
 		return value
 
-	case ast.BooleanLiteral:
+	case *ast.BooleanLiteral:
 		var res utils.Type
 		if n.Boolean == "true" || n.Boolean == "false" {
 			res = utils.Bool{
@@ -121,7 +121,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		n.Type = res
 		return res
 
-	case ast.Function:
+	case *ast.Function:
 		var params []utils.Type
 		for _, par := range n.Args {
 			params = append(params, typecheck(par, symTab))
@@ -133,7 +133,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 			Res:    res,
 		}
 
-	case ast.Block:
+	case *ast.Block:
 		var exprs []utils.Type
 		tab := utils.NewSymTab[utils.Type](symTab)
 		for _, expr := range n.Expressions {
@@ -146,7 +146,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 			Res:    res,
 		}
 
-	case ast.WhileLoop:
+	case *ast.WhileLoop:
 		cond := typecheck(n.Condition, symTab)
 		if _, ok := cond.(utils.Bool); !ok {
 			panic(fmt.Sprintf("%s condition is not boolean", cond))
@@ -154,7 +154,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		n.Type = cond
 		return typecheck(n.Looping, symTab)
 
-	case ast.FunctionTypeExpression:
+	case *ast.FunctionTypeExpression:
 		return nil
 	}
 	return nil

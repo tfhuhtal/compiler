@@ -30,6 +30,8 @@ func Generate(rootTypes map[IRVar]Type, rootExpr ast.Expression) []ir.Instructio
 
 	varFinalResult := visit(rootSymTab, rootExpr, varTypes, &ins)
 
+	fmt.Println(varTypes)
+
 	if _, ok := varTypes[varFinalResult].(utils.Int); ok {
 		ins = append(ins, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: rootExpr.GetLocation()},
@@ -85,7 +87,7 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 		var variable IRVar
 		if e.Boolean == "true" || e.Boolean == "false" {
 			value, _ := strconv.ParseBool(e.Boolean)
-			variable = newVar(utils.Bool{Name: "bool"}, varTypes)
+			variable = newVar(utils.Bool{Name: "Bool"}, varTypes)
 			*ins = append(*ins, ir.LoadBoolConst{
 				BaseInstruction: ir.BaseInstruction{Location: loc},
 				Value:           value,

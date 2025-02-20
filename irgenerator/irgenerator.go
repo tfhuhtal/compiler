@@ -106,8 +106,6 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 			panic("Perkele")
 		}
 
-	case ast.Declaration:
-
 	case ast.BinaryOp:
 		varOp, exists := st.Table[e.Op]
 		if !exists {
@@ -124,6 +122,20 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 			Dest:            res,
 		})
 		return res
+
+		// TODO: create new variable to the var types and append it to the ins
+	case ast.Declaration:
+		value := visit(st, e.Value, varTypes, ins)
+		var name string
+		if identifier, ok := e.Variable.(ast.Identifier); ok {
+			name = identifier.Name
+		}
+		if _, exists := st.Table[name]; exists {
+			panic(fmt.Sprintf("%s already declared", e.Variable))
+		}
+		st.Table[name] = value
+		*ins = append(*ins, ir.Copy{})
+		return st.Table[name]
 
 	case ast.Unary:
 

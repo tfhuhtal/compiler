@@ -38,18 +38,14 @@ func callCompiler(sourceCode string, file string) any {
 	typechecker.Type(res)
 	fmt.Println(res)
 	fmt.Println("=================================================")
-	var rootTypes map[irgenerator.IRVar]utils.Type
+	var rootTypes = make(map[irgenerator.IRVar]utils.Type)
+	rootTypes["+"] = utils.Int{}
+	rootTypes["*"] = utils.Int{}
 	var instructions []ir.Instruction
 
-	for _, expr := range res {
-		instructions = append(instructions, irgenerator.Generate(rootTypes, expr)...)
-	}
+	instructions = irgenerator.Generate(rootTypes, res[0])
 
-	// Process the generated instructions as needed
-	for _, instr := range instructions {
-		fmt.Println(instr)
-	}
-
+	fmt.Println(instructions)
 	return instructions
 }
 
@@ -144,7 +140,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		callCompiler("var n: Int = 2;print_int(n);while n > 1 do {if n % 2 == 0 then {n = n / 2;} else {n = 3*n + 1;}print_int(n);}", inputFile)
+		callCompiler("1 + 2 * 3", inputFile)
 		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

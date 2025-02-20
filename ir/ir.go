@@ -107,21 +107,3 @@ type Label struct {
 func (l Label) String() string {
 	return fmt.Sprintf("Label(%s)", l.Label)
 }
-
-type PrintInt struct {
-	BaseInstruction
-	Value IRVar
-}
-
-func (p PrintInt) String() string {
-	return fmt.Sprintf("Call(print_int, %s)", p.Value)
-}
-
-type PrintBool struct {
-	BaseInstruction
-	Value IRVar
-}
-
-func (p PrintBool) String() string {
-	return fmt.Sprintf("Call(print_bool, %s)", p.Value)
-}

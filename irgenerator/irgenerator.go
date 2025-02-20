@@ -28,17 +28,21 @@ func Generate(rootTypes map[IRVar]Type, rootExpr ast.Expression) []ir.Instructio
 		rootSymTab.Table[v] = v
 	}
 
-	varFinalResult := visit(*rootSymTab, rootExpr, varTypes, ins)
+	varFinalResult := visit(rootSymTab, rootExpr, varTypes, &ins)
 
 	if _, ok := varTypes[varFinalResult].(utils.Int); ok {
-		ins = append(ins, ir.PrintInt{
+		ins = append(ins, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: rootExpr.GetLocation()},
-			Value:           varFinalResult,
+			Fun:             "print_bool",
+			Args:            []IRVar{varFinalResult},
+			Dest:            newVar(utils.Unit{}, varTypes),
 		})
 	} else if _, ok := varTypes[varFinalResult].(utils.Bool); ok {
-		ins = append(ins, ir.PrintBool{
+		ins = append(ins, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: rootExpr.GetLocation()},
-			Value:           varFinalResult,
+			Fun:             "print_int",
+			Args:            []IRVar{varFinalResult},
+			Dest:            newVar(utils.Unit{}, varTypes),
 		})
 	}
 
@@ -48,7 +52,10 @@ func Generate(rootTypes map[IRVar]Type, rootExpr ast.Expression) []ir.Instructio
 func newVar(t Type, varTypes map[IRVar]Type) IRVar {
 	idx := 0
 	name := fmt.Sprintf("x%d", idx)
-	for _, exists := varTypes[name]; exists; {
+	for {
+		if _, exists := varTypes[name]; !exists {
+			break
+		}
 		idx++
 		name = fmt.Sprintf("x%d", idx)
 	}
@@ -56,7 +63,7 @@ func newVar(t Type, varTypes map[IRVar]Type) IRVar {
 	return name
 }
 
-func visit(st SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins []ir.Instruction) IRVar {
+func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.Instruction) IRVar {
 	loc := expr.GetLocation()
 
 	switch e := expr.(type) {
@@ -64,7 +71,7 @@ func visit(st SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins []ir.Ins
 		var variable IRVar
 		if value, ok := e.Value.(int); ok {
 			variable = newVar(utils.Int{Name: "Int"}, varTypes)
-			ins = append(ins, ir.LoadIntConst{
+			*ins = append(*ins, ir.LoadIntConst{
 				BaseInstruction: ir.BaseInstruction{Location: loc},
 				Value:           value,
 				Dest:            variable,
@@ -79,7 +86,7 @@ func visit(st SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins []ir.Ins
 		if e.Boolean == "true" || e.Boolean == "false" {
 			value, _ := strconv.ParseBool(e.Boolean)
 			variable = newVar(utils.Bool{Name: "bool"}, varTypes)
-			ins = append(ins, ir.LoadBoolConst{
+			*ins = append(*ins, ir.LoadBoolConst{
 				BaseInstruction: ir.BaseInstruction{Location: loc},
 				Value:           value,
 				Dest:            variable,
@@ -97,6 +104,21 @@ func visit(st SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins []ir.Ins
 	case ast.Declaration:
 
 	case ast.BinaryOp:
+		varOp, exists := st.Table[e.Op]
+		if !exists {
+			panic("jumankauti")
+		}
+		left := visit(st, e.Left, varTypes, ins)
+		right := visit(st, e.Right, varTypes, ins)
+		res := newVar(e.Type, varTypes)
+
+		*ins = append(*ins, ir.Call{
+			BaseInstruction: ir.BaseInstruction{Location: loc},
+			Fun:             varOp,
+			Args:            []IRVar{left, right},
+			Dest:            res,
+		})
+		return res
 
 	case ast.Unary:
 
@@ -108,8 +130,6 @@ func visit(st SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins []ir.Ins
 
 	case ast.Block:
 
-	default:
-		panic("Unhandled expression type")
 	}
-	return "yes"
+	return ""
 }

@@ -41,6 +41,7 @@ func callCompiler(sourceCode string, file string) any {
 	var rootTypes = make(map[irgenerator.IRVar]utils.Type)
 	rootTypes["+"] = utils.Int{}
 	rootTypes["*"] = utils.Int{}
+	rootTypes[">"] = utils.Bool{}
 	var instructions []ir.Instruction
 
 	instructions = irgenerator.Generate(rootTypes, res[0])
@@ -140,7 +141,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		callCompiler("var n: Int = 3;", inputFile)
+		callCompiler("if 1 > 1 then 3", inputFile)
 		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

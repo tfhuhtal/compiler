@@ -68,6 +68,20 @@ func newVar(t Type, varTypes map[IRVar]Type) IRVar {
 	return name
 }
 
+func newLabel(varTypes map[IRVar]Type) IRVar {
+	idx := 0
+	name := fmt.Sprintf("L%d", idx)
+	for {
+		if _, exists := varTypes[name]; !exists {
+			break
+		}
+		idx++
+		name = fmt.Sprintf("L%d", idx)
+	}
+	varTypes[name] = utils.Unit{Name: name}
+	return name
+}
+
 func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.Instruction) IRVar {
 	loc := expr.GetLocation()
 
@@ -105,6 +119,7 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 		if _, exists := st.Table[e.Name]; !exists {
 			panic("Perkele")
 		}
+		return st.Table[e.Name]
 
 	case ast.BinaryOp:
 		varOp, exists := st.Table[e.Op]
@@ -145,6 +160,37 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 	case ast.Unary:
 
 	case ast.IfExpression:
+		thenLabel := ir.Label{
+			BaseInstruction: ir.BaseInstruction{Location: loc},
+			Label:           newLabel(varTypes),
+		}
+		endLabel := ir.Label{
+			BaseInstruction: ir.BaseInstruction{Location: loc},
+			Label:           newLabel(varTypes),
+		}
+		var elseLabel ir.Label
+		if e.Else != nil {
+			elseLabel = ir.Label{
+				BaseInstruction: ir.BaseInstruction{Location: loc},
+				Label:           newLabel(varTypes),
+			}
+		} else {
+			elseLabel = endLabel
+		}
+		cond := visit(st, e.Condition, varTypes, ins)
+		*ins = append(*ins, ir.CondJump{
+			BaseInstruction: ir.BaseInstruction{Location: loc},
+			Cond:            cond,
+			ThenLabel:       thenLabel,
+			ElseLabel:       elseLabel,
+		})
+		*ins = append(*ins, thenLabel)
+		visit(st, e.Then, varTypes, ins)
+
+		/*if e.Else != nil {*/
+
+		/*}*/
+		*ins = append(*ins, endLabel)
 
 	case ast.WhileLoop:
 

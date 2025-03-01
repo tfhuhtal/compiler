@@ -24,7 +24,7 @@ func Generate(rootTypes map[IRVar]Type, rootExpr ast.Expression) []ir.Instructio
 	var ins = []ir.Instruction{
 		ir.Label{
 			BaseInstruction: ir.BaseInstruction{},
-			Label:           "start",
+			Label:           newLabel(varTypes),
 		},
 	}
 
@@ -178,6 +178,7 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 			elseLabel = endLabel
 		}
 		cond := visit(st, e.Condition, varTypes, ins)
+		copyVar := newVar(utils.Int{Name: "copy"}, varTypes)
 		*ins = append(*ins, ir.CondJump{
 			BaseInstruction: ir.BaseInstruction{Location: loc},
 			Cond:            cond,
@@ -185,12 +186,30 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 			ElseLabel:       elseLabel,
 		})
 		*ins = append(*ins, thenLabel)
-		visit(st, e.Then, varTypes, ins)
+		thenVar := visit(st, e.Then, varTypes, ins)
 
-		/*if e.Else != nil {*/
-
-		/*}*/
+		res := "unit"
+		if e.Else != nil {
+			*ins = append(*ins, ir.Copy{
+				BaseInstruction: ir.BaseInstruction{Location: loc},
+				Source:          thenVar,
+				Dest:            copyVar,
+			})
+			*ins = append(*ins, ir.Jump{
+				BaseInstruction: ir.BaseInstruction{Location: loc},
+				Label:           endLabel,
+			})
+			*ins = append(*ins, elseLabel)
+			elseVar := visit(st, e.Else, varTypes, ins)
+			*ins = append(*ins, ir.Copy{
+				BaseInstruction: ir.BaseInstruction{Location: loc},
+				Source:          elseVar,
+				Dest:            copyVar,
+			})
+			res = copyVar
+		}
 		*ins = append(*ins, endLabel)
+		return res
 
 	case ast.WhileLoop:
 

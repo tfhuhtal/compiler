@@ -83,7 +83,7 @@ type Jump struct {
 }
 
 func (j Jump) String() string {
-	return fmt.Sprintf("Jump(Label: %v)", j.Label)
+	return fmt.Sprintf("Jump(%v)", j.Label)
 }
 
 // CondJump represents a conditional jump.

@@ -236,6 +236,12 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		})
 		return res
 
+	case ast.Function:
+		return "function"
+
+	case ast.Unary:
+		return "unary"
+
 	default:
 		return ""
 	}

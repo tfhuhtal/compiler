@@ -141,7 +141,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		callCompiler("if 1 > 1 then 3 else 3", inputFile)
+		callCompiler("while 1 > 1 do 3", inputFile)
 		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

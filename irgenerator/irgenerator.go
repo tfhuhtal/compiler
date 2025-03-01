@@ -21,12 +21,7 @@ func Generate(rootTypes map[IRVar]Type, rootExpr ast.Expression) []ir.Instructio
 
 	varUnit := "unit"
 	varTypes[varUnit] = utils.Unit{}
-	var ins = []ir.Instruction{
-		ir.Label{
-			BaseInstruction: ir.BaseInstruction{},
-			Label:           newLabel(varTypes),
-		},
-	}
+	var ins = []ir.Instruction{newLabel(varTypes)}
 
 	rootSymTab := utils.NewSymTab[IRVar](nil)
 	for v := range rootTypes {
@@ -68,7 +63,7 @@ func newVar(t Type, varTypes map[IRVar]Type) IRVar {
 	return name
 }
 
-func newLabel(varTypes map[IRVar]Type) IRVar {
+func newLabel(varTypes map[IRVar]Type) ir.Label {
 	idx := 0
 	name := fmt.Sprintf("L%d", idx)
 	for {
@@ -79,7 +74,10 @@ func newLabel(varTypes map[IRVar]Type) IRVar {
 		name = fmt.Sprintf("L%d", idx)
 	}
 	varTypes[name] = utils.Unit{Name: name}
-	return name
+	return ir.Label{
+		BaseInstruction: ir.BaseInstruction{},
+		Label:           name,
+	}
 }
 
 func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.Instruction) IRVar {
@@ -157,31 +155,20 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 		})
 		return st.Table[name]
 
-	case ast.Unary:
-
 	case ast.IfExpression:
-		thenLabel := ir.Label{
-			BaseInstruction: ir.BaseInstruction{Location: loc},
-			Label:           newLabel(varTypes),
-		}
-		endLabel := ir.Label{
-			BaseInstruction: ir.BaseInstruction{Location: loc},
-			Label:           newLabel(varTypes),
-		}
+		thenLabel := newLabel(varTypes)
+		endLabel := newLabel(varTypes)
 		var elseLabel ir.Label
 		if e.Else != nil {
-			elseLabel = ir.Label{
-				BaseInstruction: ir.BaseInstruction{Location: loc},
-				Label:           newLabel(varTypes),
-			}
+			elseLabel = newLabel(varTypes)
 		} else {
 			elseLabel = endLabel
 		}
-		cond := visit(st, e.Condition, varTypes, ins)
+		condVar := visit(st, e.Condition, varTypes, ins)
 		copyVar := newVar(utils.Int{Name: "copy"}, varTypes)
 		*ins = append(*ins, ir.CondJump{
 			BaseInstruction: ir.BaseInstruction{Location: loc},
-			Cond:            cond,
+			Cond:            condVar,
 			ThenLabel:       thenLabel,
 			ElseLabel:       elseLabel,
 		})
@@ -212,10 +199,30 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 		return res
 
 	case ast.WhileLoop:
+		whileStartLabel := newLabel(varTypes)
+		*ins = append(*ins, whileStartLabel)
+		condVar := visit(st, e.Condition, varTypes, ins)
+		whileBodyLabel := newLabel(varTypes)
+		whileEndLabel := newLabel(varTypes)
+		*ins = append(*ins, ir.CondJump{
+			BaseInstruction: ir.BaseInstruction{Location: loc},
+			Cond:            condVar,
+			ThenLabel:       whileBodyLabel,
+			ElseLabel:       whileEndLabel,
+		})
+		*ins = append(*ins, whileBodyLabel)
+		visit(st, e.Looping, varTypes, ins)
+		*ins = append(*ins, ir.Jump{
+			BaseInstruction: ir.BaseInstruction{Location: loc},
+			Label:           whileStartLabel,
+		})
+		*ins = append(*ins, whileEndLabel)
 
 	case ast.Function:
 
 	case ast.Block:
+
+	case ast.Unary:
 
 	}
 	return ""

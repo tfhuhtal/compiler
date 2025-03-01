@@ -140,7 +140,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		callCompiler("1 + 2 * 3;", inputFile)
+		callCompiler("var n: Int = 3;", inputFile)
 		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

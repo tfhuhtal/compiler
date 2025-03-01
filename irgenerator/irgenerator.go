@@ -123,7 +123,7 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 		})
 		return res
 
-		// TODO: create new variable to the var types and append it to the ins
+		// TODO: maybe this new should also append to the st
 	case ast.Declaration:
 		value := visit(st, e.Value, varTypes, ins)
 		var name string
@@ -134,7 +134,12 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 			panic(fmt.Sprintf("%s already declared", e.Variable))
 		}
 		st.Table[name] = value
-		*ins = append(*ins, ir.Copy{})
+		new := newVar(e.Value.GetType(), varTypes)
+		*ins = append(*ins, ir.Copy{
+			BaseInstruction: ir.BaseInstruction{Location: loc},
+			Source:          value,
+			Dest:            new,
+		})
 		return st.Table[name]
 
 	case ast.Unary:

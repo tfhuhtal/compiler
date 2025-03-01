@@ -12,123 +12,125 @@ type IRVar = ir.IRVar
 type Type = utils.Type
 type SymTab = utils.SymTab[IRVar]
 
-func Generate(rootTypes map[IRVar]Type, rootExpr ast.Expression) []ir.Instruction {
-	varTypes := make(map[IRVar]Type)
-
-	for k, v := range rootTypes {
-		varTypes[k] = v
-	}
-
-	varUnit := "unit"
-	varTypes[varUnit] = utils.Unit{}
-	var ins = []ir.Instruction{newLabel(varTypes)}
-
-	rootSymTab := utils.NewSymTab[IRVar](nil)
-	for v := range rootTypes {
-		rootSymTab.Table[v] = v
-	}
-
-	varFinalResult := visit(rootSymTab, rootExpr, varTypes, &ins)
-
-	if _, ok := varTypes[varFinalResult].(utils.Int); ok {
-		ins = append(ins, ir.Call{
-			BaseInstruction: ir.BaseInstruction{Location: rootExpr.GetLocation()},
-			Fun:             "print_int",
-			Args:            []IRVar{varFinalResult},
-			Dest:            newVar(utils.Unit{}, varTypes),
-		})
-	} else if _, ok := varTypes[varFinalResult].(utils.Bool); ok {
-		ins = append(ins, ir.Call{
-			BaseInstruction: ir.BaseInstruction{Location: rootExpr.GetLocation()},
-			Fun:             "print_bool",
-			Args:            []IRVar{varFinalResult},
-			Dest:            newVar(utils.Unit{}, varTypes),
-		})
-	}
-
-	return ins
+type IRGenerator struct {
+	varTypes     map[IRVar]Type
+	rootTypes    map[IRVar]Type
+	instructions []ir.Instruction
 }
 
-func newVar(t Type, varTypes map[IRVar]Type) IRVar {
+func NewIRGenerator(rootTypes map[IRVar]Type) *IRGenerator {
+	gen := &IRGenerator{
+		varTypes:     make(map[IRVar]Type),
+		rootTypes:    rootTypes,
+		instructions: []ir.Instruction{},
+	}
+	for k, v := range rootTypes {
+		gen.varTypes[k] = v
+	}
+	gen.varTypes["unit"] = utils.Unit{}
+	gen.instructions = append(gen.instructions, gen.newLabel())
+	return gen
+}
+
+func (g *IRGenerator) Generate(rootExpr ast.Expression) []ir.Instruction {
+	rootSymTab := utils.NewSymTab[IRVar](nil)
+	for v := range g.varTypes {
+		rootSymTab.Table[v] = v
+	}
+	result := g.visit(rootSymTab, rootExpr)
+
+	if _, ok := g.varTypes[result].(utils.Int); ok {
+		g.instructions = append(g.instructions, ir.Call{
+			BaseInstruction: ir.BaseInstruction{Location: rootExpr.GetLocation()},
+			Fun:             "print_int",
+			Args:            []IRVar{result},
+			Dest:            g.newVar(utils.Unit{}),
+		})
+	} else if _, ok := g.varTypes[result].(utils.Bool); ok {
+		g.instructions = append(g.instructions, ir.Call{
+			BaseInstruction: ir.BaseInstruction{Location: rootExpr.GetLocation()},
+			Fun:             "print_bool",
+			Args:            []IRVar{result},
+			Dest:            g.newVar(utils.Unit{}),
+		})
+	}
+	return g.instructions
+}
+
+func (g *IRGenerator) newVar(t Type) IRVar {
 	idx := 0
 	name := fmt.Sprintf("x%d", idx)
 	for {
-		if _, exists := varTypes[name]; !exists {
+		if _, exists := g.varTypes[name]; !exists {
 			break
 		}
 		idx++
 		name = fmt.Sprintf("x%d", idx)
 	}
-	varTypes[name] = t
+	g.varTypes[name] = t
 	return name
 }
 
-func newLabel(varTypes map[IRVar]Type) ir.Label {
+func (g *IRGenerator) newLabel() ir.Label {
 	idx := 0
 	name := fmt.Sprintf("L%d", idx)
 	for {
-		if _, exists := varTypes[name]; !exists {
+		if _, exists := g.varTypes[name]; !exists {
 			break
 		}
 		idx++
 		name = fmt.Sprintf("L%d", idx)
 	}
-	varTypes[name] = utils.Unit{Name: name}
+	g.varTypes[name] = utils.Unit{Name: name}
 	return ir.Label{
 		BaseInstruction: ir.BaseInstruction{},
 		Label:           name,
 	}
 }
 
-func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.Instruction) IRVar {
+func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 	loc := expr.GetLocation()
-
 	switch e := expr.(type) {
 	case ast.Literal:
-		var variable IRVar
 		if value, ok := e.Value.(int); ok {
-			variable = newVar(utils.Int{Name: "Int"}, varTypes)
-			*ins = append(*ins, ir.LoadIntConst{
+			variable := g.newVar(utils.Int{Name: "Int"})
+			g.instructions = append(g.instructions, ir.LoadIntConst{
 				BaseInstruction: ir.BaseInstruction{Location: loc},
 				Value:           value,
 				Dest:            variable,
 			})
-		} else {
-			panic("Unsupported literal")
+			return variable
 		}
-		return variable
+		panic("Unsupported literal")
 
 	case ast.BooleanLiteral:
-		var variable IRVar
 		if e.Boolean == "true" || e.Boolean == "false" {
 			value, _ := strconv.ParseBool(e.Boolean)
-			variable = newVar(utils.Bool{Name: "Bool"}, varTypes)
-			*ins = append(*ins, ir.LoadBoolConst{
+			variable := g.newVar(utils.Bool{Name: "Bool"})
+			g.instructions = append(g.instructions, ir.LoadBoolConst{
 				BaseInstruction: ir.BaseInstruction{Location: loc},
 				Value:           value,
 				Dest:            variable,
 			})
-		} else {
-			panic("Unsupported boolean literal")
+			return variable
 		}
-		return variable
+		panic("Unsupported boolean literal")
 
 	case ast.Identifier:
 		if _, exists := st.Table[e.Name]; !exists {
-			panic("Perkele")
+			panic("Undefined variable")
 		}
 		return st.Table[e.Name]
 
 	case ast.BinaryOp:
 		varOp, exists := st.Table[e.Op]
 		if !exists {
-			panic("jumankauti")
+			panic("Unknown operator")
 		}
-		left := visit(st, e.Left, varTypes, ins)
-		right := visit(st, e.Right, varTypes, ins)
-		res := newVar(varTypes[left], varTypes)
-
-		*ins = append(*ins, ir.Call{
+		left := g.visit(st, e.Left)
+		right := g.visit(st, e.Right)
+		res := g.newVar(g.varTypes[left])
+		g.instructions = append(g.instructions, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: loc},
 			Fun:             varOp,
 			Args:            []IRVar{left, right},
@@ -136,9 +138,8 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 		})
 		return res
 
-		// TODO: maybe this new should also append to the st
 	case ast.Declaration:
-		value := visit(st, e.Value, varTypes, ins)
+		value := g.visit(st, e.Value)
 		var name string
 		if identifier, ok := e.Variable.(ast.Identifier); ok {
 			name = identifier.Name
@@ -147,83 +148,95 @@ func visit(st *SymTab, expr ast.Expression, varTypes map[IRVar]Type, ins *[]ir.I
 			panic(fmt.Sprintf("%s already declared", e.Variable))
 		}
 		st.Table[name] = value
-		new := newVar(e.Value.GetType(), varTypes)
-		*ins = append(*ins, ir.Copy{
+		newVar := g.newVar(e.Value.GetType())
+		g.instructions = append(g.instructions, ir.Copy{
 			BaseInstruction: ir.BaseInstruction{Location: loc},
 			Source:          value,
-			Dest:            new,
+			Dest:            newVar,
 		})
 		return st.Table[name]
 
 	case ast.IfExpression:
-		thenLabel := newLabel(varTypes)
-		endLabel := newLabel(varTypes)
-		var elseLabel ir.Label
+		thenLabel := g.newLabel()
+		endLabel := g.newLabel()
+		elseLabel := endLabel
 		if e.Else != nil {
-			elseLabel = newLabel(varTypes)
-		} else {
-			elseLabel = endLabel
+			elseLabel = g.newLabel()
 		}
-		condVar := visit(st, e.Condition, varTypes, ins)
-		copyVar := newVar(utils.Int{Name: "copy"}, varTypes)
-		*ins = append(*ins, ir.CondJump{
+		condVar := g.visit(st, e.Condition)
+		copyVar := g.newVar(utils.Int{Name: "copy"})
+		g.instructions = append(g.instructions, ir.CondJump{
 			BaseInstruction: ir.BaseInstruction{Location: loc},
 			Cond:            condVar,
 			ThenLabel:       thenLabel,
 			ElseLabel:       elseLabel,
 		})
-		*ins = append(*ins, thenLabel)
-		thenVar := visit(st, e.Then, varTypes, ins)
-
+		g.instructions = append(g.instructions, thenLabel)
+		thenVar := g.visit(st, e.Then)
 		res := "unit"
 		if e.Else != nil {
-			*ins = append(*ins, ir.Copy{
+			g.instructions = append(g.instructions, ir.Copy{
 				BaseInstruction: ir.BaseInstruction{Location: loc},
 				Source:          thenVar,
 				Dest:            copyVar,
 			})
-			*ins = append(*ins, ir.Jump{
+			g.instructions = append(g.instructions, ir.Jump{
 				BaseInstruction: ir.BaseInstruction{Location: loc},
 				Label:           endLabel,
 			})
-			*ins = append(*ins, elseLabel)
-			elseVar := visit(st, e.Else, varTypes, ins)
-			*ins = append(*ins, ir.Copy{
+			g.instructions = append(g.instructions, elseLabel)
+			elseVar := g.visit(st, e.Else)
+			g.instructions = append(g.instructions, ir.Copy{
 				BaseInstruction: ir.BaseInstruction{Location: loc},
 				Source:          elseVar,
 				Dest:            copyVar,
 			})
 			res = copyVar
 		}
-		*ins = append(*ins, endLabel)
+		g.instructions = append(g.instructions, endLabel)
 		return res
 
 	case ast.WhileLoop:
-		whileStartLabel := newLabel(varTypes)
-		*ins = append(*ins, whileStartLabel)
-		condVar := visit(st, e.Condition, varTypes, ins)
-		whileBodyLabel := newLabel(varTypes)
-		whileEndLabel := newLabel(varTypes)
-		*ins = append(*ins, ir.CondJump{
+		whileStartLabel := g.newLabel()
+		g.instructions = append(g.instructions, whileStartLabel)
+		condVar := g.visit(st, e.Condition)
+		whileBodyLabel := g.newLabel()
+		whileEndLabel := g.newLabel()
+		g.instructions = append(g.instructions, ir.CondJump{
 			BaseInstruction: ir.BaseInstruction{Location: loc},
 			Cond:            condVar,
 			ThenLabel:       whileBodyLabel,
 			ElseLabel:       whileEndLabel,
 		})
-		*ins = append(*ins, whileBodyLabel)
-		visit(st, e.Looping, varTypes, ins)
-		*ins = append(*ins, ir.Jump{
+		g.instructions = append(g.instructions, whileBodyLabel)
+		g.visit(st, e.Looping)
+		g.instructions = append(g.instructions, ir.Jump{
 			BaseInstruction: ir.BaseInstruction{Location: loc},
 			Label:           whileStartLabel,
 		})
-		*ins = append(*ins, whileEndLabel)
-
-	case ast.Function:
+		g.instructions = append(g.instructions, whileEndLabel)
+		return "unit"
 
 	case ast.Block:
+		innerTable := utils.NewSymTab(st)
 
-	case ast.Unary:
+		for v := range g.rootTypes {
+			innerTable.Table[v] = v
+		}
 
+		var blockRes IRVar
+		for _, stmt := range e.Expressions {
+			blockRes = g.visit(innerTable, stmt)
+		}
+		res := g.newVar(g.varTypes[blockRes])
+		g.instructions = append(g.instructions, ir.Copy{
+			BaseInstruction: ir.BaseInstruction{Location: loc},
+			Source:          blockRes,
+			Dest:            res,
+		})
+		return res
+
+	default:
+		return ""
 	}
-	return ""
 }

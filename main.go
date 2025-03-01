@@ -1,7 +1,6 @@
 package main
 
 import (
-	"compiler/ir"
 	"compiler/irgenerator"
 	"compiler/parser"
 	"compiler/tokenizer"
@@ -42,9 +41,9 @@ func callCompiler(sourceCode string, file string) any {
 	rootTypes["+"] = utils.Int{}
 	rootTypes["*"] = utils.Int{}
 	rootTypes[">"] = utils.Bool{}
-	var instructions []ir.Instruction
 
-	instructions = irgenerator.Generate(rootTypes, res[0])
+	gen := irgenerator.NewIRGenerator(rootTypes)
+	instructions := gen.Generate(res[0])
 
 	fmt.Println(instructions)
 	return instructions
@@ -141,7 +140,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		callCompiler("while 1 > 1 do 3", inputFile)
+		callCompiler("{3 + 3;3}", inputFile)
 		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

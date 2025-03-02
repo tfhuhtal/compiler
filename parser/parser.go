@@ -293,27 +293,6 @@ func (p *Parser) parseFunction(list []string, allow bool, callee ast.Expression)
 	}
 }
 
-func (p *Parser) parseTopExpression(list []string, allow bool) ast.Expression {
-	if p.peek().Text == "var" {
-		p.consume("var")
-		decl := p.parseExpression(append([]string{":"}, list...), allow)
-		if p.peek().Text == ":" {
-			p.consume(":")
-			typed := p.parseTypeExpression()
-			p.consume("=")
-			declVal := p.parseExpression(list, allow)
-			return ast.Declaration{
-				Location: decl.GetLocation(),
-				Variable: decl,
-				Value:    declVal,
-				Typed:    typed,
-				Type:     utils.Unit{},
-			}
-		}
-	}
-	return p.parseExpression(list, allow)
-}
-
 func (p *Parser) parseExpression(list []string, allow bool) ast.Expression {
 	precedence := 0
 	left := p.parseTermPrecedence(precedence+1, list, allow)
@@ -371,9 +350,32 @@ func (p *Parser) parseTypeExpression() ast.Expression {
 	}
 }
 
+func (p *Parser) parseTopExpression(list []string, allow bool) ast.Expression {
+	if p.peek().Text == "var" {
+		p.consume("var")
+		decl := p.parseExpression(append([]string{":"}, list...), allow)
+		if p.peek().Text == ":" {
+			p.consume(":")
+			typed := p.parseTypeExpression()
+			p.consume("=")
+			declVal := p.parseExpression(list, allow)
+			return ast.Declaration{
+				Location: decl.GetLocation(),
+				Variable: decl,
+				Value:    declVal,
+				Typed:    typed,
+				Type:     utils.Unit{},
+			}
+		}
+	}
+	return p.parseExpression(list, allow)
+}
+
 func (p *Parser) parseBlock() ast.Expression {
 	loc := p.peek().Location
-	p.consume("{")
+	if p.peek().Text == "{" {
+		p.consume("{")
+	}
 	var seq []ast.Expression
 	var res ast.Expression = nil
 	if p.peek().Text != "}" {
@@ -410,23 +412,8 @@ func (p *Parser) parseBlock() ast.Expression {
 	}
 }
 
-func (p *Parser) parseAll() []ast.Expression {
-	var exprs []ast.Expression
-	top := p.parseTopExpression([]string{";"}, false)
-	exprs = append(exprs, top)
-	for p.peek().Text == ";" {
-		p.consume(";")
-		if p.peek().Type == "end" {
-			break
-		}
-		top = p.parseTopExpression([]string{";"}, false)
-		exprs = append(exprs, top)
-	}
-	return exprs
-}
-
-func (p *Parser) Parse() []ast.Expression {
-	expr := p.parseAll()
+func (p *Parser) Parse() ast.Expression {
+	expr := p.parseBlock()
 	return expr
 }
 

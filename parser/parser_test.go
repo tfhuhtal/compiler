@@ -15,7 +15,7 @@ func TestParser_Declaration(t *testing.T) {
 	tokens := tokenizer.Tokenize("var x: Int = 42;", "")
 	p := New(tokens)
 	res := p.Parse()
-	if len(res) == 0 {
+	if res == nil {
 		t.Errorf("Expected at least one expression")
 	}
 }
@@ -24,7 +24,7 @@ func TestParser_BinaryOp(t *testing.T) {
 	tokens := tokenizer.Tokenize("3 + 4 * 5", "")
 	p := New(tokens)
 	res := p.Parse()
-	if len(res) == 0 {
+	if res == nil {
 		t.Errorf("Expected at least one expression")
 	}
 }
@@ -56,8 +56,8 @@ func TestParser_Blocks(t *testing.T) {
 					}
 				}()
 				res := p.Parse()
-				if len(res) == 0 {
-					t.Errorf("Expected non-empty AST for code '%s'", tt.code)
+				if res != nil {
+					t.Errorf("Expected at least one expression")
 				}
 			} else {
 				defer func() {

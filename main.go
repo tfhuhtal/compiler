@@ -41,9 +41,12 @@ func callCompiler(sourceCode string, file string) any {
 	rootTypes["+"] = utils.Int{}
 	rootTypes["*"] = utils.Int{}
 	rootTypes[">"] = utils.Bool{}
+	rootTypes["%"] = utils.Int{}
+	rootTypes["=="] = utils.Int{}
+	rootTypes["/"] = utils.Int{}
 
 	gen := irgenerator.NewIRGenerator(rootTypes)
-	instructions := gen.Generate(res[0])
+	instructions := gen.Generate(res)
 
 	fmt.Println(instructions)
 	return instructions
@@ -140,7 +143,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		callCompiler("{3 + 3;3}", inputFile)
+		callCompiler("var n: Int = 1;", inputFile)
 		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

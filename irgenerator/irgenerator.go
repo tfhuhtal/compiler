@@ -118,7 +118,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 
 	case ast.Identifier:
 		if _, exists := st.Table[e.Name]; !exists {
-			panic("Undefined variable")
+			panic(fmt.Sprintf("Undefined variable: %s, in location %v", e.Name, loc))
 		}
 		return st.Table[e.Name]
 

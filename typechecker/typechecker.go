@@ -135,7 +135,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 
 	case *ast.Block:
 		var exprs []utils.Type
-		tab := utils.NewSymTab[utils.Type](symTab)
+		tab := utils.NewSymTab(symTab)
 		for _, expr := range n.Expressions {
 			exprs = append(exprs, typecheck(expr, tab))
 		}
@@ -160,12 +160,8 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 	return nil
 }
 
-func Type(nodes []ast.Expression) any {
+func Type(nodes ast.Expression) any {
 	tab := utils.NewSymTab[utils.Type](nil)
-	var res []any
-
-	for _, node := range nodes {
-		res = append(res, typecheck(node, tab))
-	}
+	res := typecheck(nodes, tab)
 	return res
 }

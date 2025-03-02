@@ -224,14 +224,18 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 			innerTable.Table[v] = v
 		}
 
-		var blockRes IRVar
+		var exprs IRVar
 		for _, stmt := range e.Expressions {
-			blockRes = g.visit(innerTable, stmt)
+			exprs = g.visit(innerTable, stmt)
 		}
-		res := g.newVar(g.varTypes[blockRes])
+		res := "unit"
+		fmt.Println(e.Result, e)
+		if e.Result != nil {
+			res = g.visit(st, e.Result)
+		}
 		g.instructions = append(g.instructions, ir.Copy{
 			BaseInstruction: ir.BaseInstruction{Location: loc},
-			Source:          blockRes,
+			Source:          exprs,
 			Dest:            res,
 		})
 		return res

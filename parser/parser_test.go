@@ -56,7 +56,7 @@ func TestParser_Blocks(t *testing.T) {
 					}
 				}()
 				res := p.Parse()
-				if res != nil {
+				if res == nil {
 					t.Errorf("Expected at least one expression")
 				}
 			} else {

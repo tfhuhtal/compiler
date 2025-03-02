@@ -4,6 +4,7 @@ import (
 	"compiler/ast"
 	"compiler/tokenizer"
 	"compiler/utils"
+	"fmt"
 	"strconv"
 )
 
@@ -81,7 +82,7 @@ func (p *Parser) consume(expected interface{}) tokenizer.Token {
 
 	if expectedStr, ok := expected.(string); ok {
 		if token.Text != expectedStr {
-			return tokenizer.Token{}
+			panic(fmt.Sprintf("Expected %s but got %s", expectedStr, token.Text))
 		}
 	}
 
@@ -380,9 +381,13 @@ func (p *Parser) parseBlock() ast.Expression {
 	var res ast.Expression = nil
 	if p.peek().Text != "}" {
 		line := p.parseTopExpression([]string{";", "}"}, true)
+
 		if p.peek().Text != "}" {
 			for p.peek().Text == ";" || line != nil || p.peekPrev().Text == "}" {
-				p.consume(";")
+				if p.peek().Text == ";" {
+					p.consume(";")
+				}
+
 				if p.peek().Text == "}" {
 					if p.peekPrev().Text == ";" {
 						seq = append(seq, line)
@@ -396,6 +401,7 @@ func (p *Parser) parseBlock() ast.Expression {
 					}
 					break
 				}
+
 				seq = append(seq, line)
 				line = p.parseTopExpression([]string{";", "}"}, true)
 			}

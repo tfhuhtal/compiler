@@ -4,7 +4,6 @@ import (
 	"compiler/ast"
 	"compiler/tokenizer"
 	"compiler/utils"
-	"fmt"
 	"strconv"
 )
 
@@ -82,7 +81,7 @@ func (p *Parser) consume(expected interface{}) tokenizer.Token {
 
 	if expectedStr, ok := expected.(string); ok {
 		if token.Text != expectedStr {
-			panic(fmt.Sprintf("Expected %s but got %s", expectedStr, token.Text))
+			return tokenizer.Token{}
 		}
 	}
 
@@ -373,48 +372,43 @@ func (p *Parser) parseTopExpression(list []string, allow bool) ast.Expression {
 }
 
 func (p *Parser) parseBlock() ast.Expression {
+	p.consume("{")
 	loc := p.peek().Location
-	if p.peek().Text == "{" {
-		p.consume("{")
-	}
-	var seq []ast.Expression
-	var res ast.Expression = nil
-	if p.peek().Text != "}" {
-		line := p.parseTopExpression([]string{";", "}"}, true)
-
-		if p.peek().Text != "}" {
-			for p.peek().Text == ";" || line != nil || p.peekPrev().Text == "}" {
-				if p.peek().Text == ";" {
-					p.consume(";")
-				}
-
-				if p.peek().Text == "}" {
-					if p.peekPrev().Text == ";" {
-						seq = append(seq, line)
-						res = ast.Literal{
-							Location: p.peek().Location,
-							Value:    nil,
-							Type:     utils.Unit{},
-						}
-					} else {
-						res = line
-					}
-					break
-				}
-
-				seq = append(seq, line)
-				line = p.parseTopExpression([]string{";", "}"}, true)
+	var expressions []ast.Expression
+	for {
+		if p.peek().Text == "}" || p.peek().Type == "end" {
+			endLoc := p.peek().Location
+			p.consume("}")
+			return ast.Block{
+				Location:    loc,
+				Expressions: expressions,
+				Result: ast.Literal{
+					Location: endLoc,
+					Value:    nil,
+					Type:     utils.Unit{},
+				},
+				Type: utils.Unit{},
 			}
-		} else {
-			res = line
 		}
-	}
-	p.consume("}")
-	return ast.Block{
-		Location:    loc,
-		Expressions: seq,
-		Result:      res,
-		Type:        utils.Unit{},
+		// Parse a expression
+		expression := p.parseTopExpression([]string{";", "}"}, true)
+
+		// If next is '}' now, return block with 'expression' as result
+		if p.peek().Text == "}" {
+			p.consume("}")
+			return ast.Block{
+				Location:    loc,
+				Expressions: expressions,
+				Result:      expression,
+				Type:        utils.Unit{},
+			}
+		}
+
+		// Otherwise add expression and consume ';' if present
+		expressions = append(expressions, expression)
+		if p.peek().Text == ";" {
+			p.consume(";")
+		}
 	}
 }
 

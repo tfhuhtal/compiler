@@ -100,8 +100,10 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 				Dest:            variable,
 			})
 			return variable
+		} else if e.Value == nil {
+			return "unit"
 		}
-		panic("Unsupported literal")
+		panic(fmt.Sprintf("Unsupported literal: %v", e.Value))
 
 	case ast.BooleanLiteral:
 		if e.Boolean == "true" || e.Boolean == "false" {
@@ -123,12 +125,22 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		return st.Table[e.Name]
 
 	case ast.BinaryOp:
-		varOp, exists := st.Table[e.Op]
-		if !exists {
-			panic("Unknown operator")
-		}
 		left := g.visit(st, e.Left)
 		right := g.visit(st, e.Right)
+		if e.Op == "=" {
+			res := g.newVar(g.varTypes[left])
+			g.instructions = append(g.instructions, ir.Copy{
+				BaseInstruction: ir.BaseInstruction{Location: loc},
+				Source:          res,
+				Dest:            left,
+			})
+
+			return left
+		}
+		varOp, exists := st.Table[e.Op]
+		if !exists {
+			panic(fmt.Sprintf("Unknown operator: %s", e.Op))
+		}
 		res := g.newVar(g.varTypes[left])
 		g.instructions = append(g.instructions, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: loc},
@@ -224,20 +236,18 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 			innerTable.Table[v] = v
 		}
 
-		var exprs IRVar
-		for _, stmt := range e.Expressions {
-			exprs = g.visit(innerTable, stmt)
+		for _, expr := range e.Expressions {
+			g.visit(st, expr)
 		}
 		res := "unit"
-		fmt.Println(e.Result, e)
 		if e.Result != nil {
 			res = g.visit(st, e.Result)
 		}
-		g.instructions = append(g.instructions, ir.Copy{
-			BaseInstruction: ir.BaseInstruction{Location: loc},
-			Source:          exprs,
-			Dest:            res,
-		})
+		/*g.instructions = append(g.instructions, ir.Copy{*/
+		/*BaseInstruction: ir.BaseInstruction{Location: loc},*/
+		/*Source:          exprs,*/
+		/*Dest:            res,*/
+		/*})*/
 		return res
 
 	case ast.Function:

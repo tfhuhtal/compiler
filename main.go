@@ -1,12 +1,11 @@
 package main
 
 import (
-	/*"compiler/irgenerator"*/
+	"compiler/irgenerator"
 	"compiler/parser"
 	"compiler/tokenizer"
-
-	/*"compiler/typechecker"*/
-	/*"compiler/utils"*/
+	"compiler/typechecker"
+	"compiler/utils"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,23 +34,22 @@ func callCompiler(sourceCode string, file string) any {
 	fmt.Println("=================================================")
 	p := parser.New(tokens)
 	res := p.Parse()
-	/*typechecker.Type(res)*/
+	typechecker.Type(res)
 	fmt.Println(res)
-	/*fmt.Println("=================================================")*/
-	/*var rootTypes = make(map[irgenerator.IRVar]utils.Type)*/
-	/*rootTypes["+"] = utils.Int{}*/
-	/*rootTypes["*"] = utils.Int{}*/
-	/*rootTypes[">"] = utils.Bool{}*/
-	/*rootTypes["%"] = utils.Int{}*/
-	/*rootTypes["=="] = utils.Int{}*/
-	/*rootTypes["/"] = utils.Int{}*/
+	fmt.Println("=================================================")
+	var rootTypes = make(map[irgenerator.IRVar]utils.Type)
+	rootTypes["+"] = utils.Int{}
+	rootTypes["*"] = utils.Int{}
+	rootTypes[">"] = utils.Bool{}
+	rootTypes["%"] = utils.Int{}
+	rootTypes["=="] = utils.Int{}
+	rootTypes["/"] = utils.Int{}
 
-	/*gen := irgenerator.NewIRGenerator(rootTypes)*/
-	/*instructions := gen.Generate(res)*/
+	gen := irgenerator.NewIRGenerator(rootTypes)
+	instructions := gen.Generate(res)
 
-	/*fmt.Println(instructions)*/
-	/*return instructions*/
-	return res
+	fmt.Println(instructions)
+	return instructions
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -145,7 +143,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		callCompiler("var n: Int = read_int();while n > 1 do {if n % 2 == 0 then {n = n / 2;} else {n = 3*n + 1;}print_int(n);}", inputFile)
+		callCompiler("var n: Int = 2;n = n / 2", inputFile)
 		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

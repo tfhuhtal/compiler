@@ -394,7 +394,7 @@ func (p *Parser) parseBlock() ast.Expression {
 		expression := p.parseTopExpression([]string{";", "}"}, true)
 
 		// If next is '}' now, return block with 'expression' as result
-		if p.peek().Text == "}" {
+		if p.peek().Text == "}" || p.peek().Type == "end" {
 			p.consume("}")
 			return ast.Block{
 				Location:    loc,

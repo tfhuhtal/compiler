@@ -44,6 +44,7 @@ func callCompiler(sourceCode string, file string) any {
 	rootTypes["%"] = utils.Int{}
 	rootTypes["=="] = utils.Int{}
 	rootTypes["/"] = utils.Int{}
+	rootTypes["print_int"] = utils.Unit{}
 
 	gen := irgenerator.NewIRGenerator(rootTypes)
 	instructions := gen.Generate(res)
@@ -143,7 +144,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		callCompiler("var n: Int = 2;n = n / 2", inputFile)
+		callCompiler("var n: Int = read_int();", inputFile)
 		fmt.Print(outputFile)
 	} else if command == "serve" {
 		runServer(host, port)

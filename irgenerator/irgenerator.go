@@ -89,13 +89,12 @@ func (g *IRGenerator) newLabel() ir.Label {
 }
 
 func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
-	loc := expr.GetLocation()
 	switch e := expr.(type) {
 	case ast.Literal:
 		if value, ok := e.Value.(int); ok {
 			variable := g.newVar(utils.Int{Name: "Int"})
 			g.instructions = append(g.instructions, ir.LoadIntConst{
-				BaseInstruction: ir.BaseInstruction{Location: loc},
+				BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 				Value:           value,
 				Dest:            variable,
 			})
@@ -110,7 +109,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 			value, _ := strconv.ParseBool(e.Boolean)
 			variable := g.newVar(utils.Bool{Name: "Bool"})
 			g.instructions = append(g.instructions, ir.LoadBoolConst{
-				BaseInstruction: ir.BaseInstruction{Location: loc},
+				BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 				Value:           value,
 				Dest:            variable,
 			})
@@ -120,7 +119,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 
 	case ast.Identifier:
 		if _, exists := st.Table[e.Name]; !exists {
-			panic(fmt.Sprintf("Undefined variable: %s, in location %v", e.Name, loc))
+			panic(fmt.Sprintf("Undefined variable: %s, in location %v", e.Name, e.GetLocation()))
 		}
 		return st.Table[e.Name]
 
@@ -130,7 +129,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		if e.Op == "=" {
 			res := g.newVar(g.varTypes[left])
 			g.instructions = append(g.instructions, ir.Copy{
-				BaseInstruction: ir.BaseInstruction{Location: loc},
+				BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 				Source:          res,
 				Dest:            left,
 			})
@@ -143,7 +142,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		}
 		res := g.newVar(g.varTypes[left])
 		g.instructions = append(g.instructions, ir.Call{
-			BaseInstruction: ir.BaseInstruction{Location: loc},
+			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 			Fun:             varOp,
 			Args:            []IRVar{left, right},
 			Dest:            res,
@@ -159,14 +158,15 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		if _, exists := st.Table[name]; exists {
 			panic(fmt.Sprintf("%s already declared", e.Variable))
 		}
-		st.Table[name] = value
 		newVar := g.newVar(e.Value.GetType())
+		st.Table[name] = newVar
+		fmt.Println(st.Table, value)
 		g.instructions = append(g.instructions, ir.Copy{
-			BaseInstruction: ir.BaseInstruction{Location: loc},
+			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 			Source:          value,
 			Dest:            newVar,
 		})
-		return st.Table[name]
+		return newVar
 
 	case ast.IfExpression:
 		thenLabel := g.newLabel()
@@ -178,7 +178,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		condVar := g.visit(st, e.Condition)
 		copyVar := g.newVar(utils.Int{Name: "copy"})
 		g.instructions = append(g.instructions, ir.CondJump{
-			BaseInstruction: ir.BaseInstruction{Location: loc},
+			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 			Cond:            condVar,
 			ThenLabel:       thenLabel,
 			ElseLabel:       elseLabel,
@@ -188,18 +188,18 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		res := "unit"
 		if e.Else != nil {
 			g.instructions = append(g.instructions, ir.Copy{
-				BaseInstruction: ir.BaseInstruction{Location: loc},
+				BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 				Source:          thenVar,
 				Dest:            copyVar,
 			})
 			g.instructions = append(g.instructions, ir.Jump{
-				BaseInstruction: ir.BaseInstruction{Location: loc},
+				BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 				Label:           endLabel,
 			})
 			g.instructions = append(g.instructions, elseLabel)
 			elseVar := g.visit(st, e.Else)
 			g.instructions = append(g.instructions, ir.Copy{
-				BaseInstruction: ir.BaseInstruction{Location: loc},
+				BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 				Source:          elseVar,
 				Dest:            copyVar,
 			})
@@ -215,7 +215,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		whileBodyLabel := g.newLabel()
 		whileEndLabel := g.newLabel()
 		g.instructions = append(g.instructions, ir.CondJump{
-			BaseInstruction: ir.BaseInstruction{Location: loc},
+			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 			Cond:            condVar,
 			ThenLabel:       whileBodyLabel,
 			ElseLabel:       whileEndLabel,
@@ -223,7 +223,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		g.instructions = append(g.instructions, whileBodyLabel)
 		g.visit(st, e.Looping)
 		g.instructions = append(g.instructions, ir.Jump{
-			BaseInstruction: ir.BaseInstruction{Location: loc},
+			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 			Label:           whileStartLabel,
 		})
 		g.instructions = append(g.instructions, whileEndLabel)
@@ -251,7 +251,19 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		return res
 
 	case ast.Function:
-		return "function"
+		var args []IRVar
+		for _, arg := range e.Args {
+			args = append(args, g.visit(st, arg))
+		}
+		name := e.GetName()
+		dest := g.newVar(utils.Unit{})
+		g.instructions = append(g.instructions, ir.Call{
+			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
+			Fun:             name,
+			Args:            args,
+			Dest:            dest,
+		})
+		return dest
 
 	case ast.Unary:
 		return "unary"

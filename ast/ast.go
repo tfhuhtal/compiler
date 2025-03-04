@@ -72,9 +72,6 @@ func (Function) isExpression() {}
 func (f Function) GetLocation() Location {
 	return f.Location
 }
-func (f Function) GetName() string {
-	return f.Name.(Identifier).Name
-}
 
 type BooleanLiteral struct {
 	Boolean  string

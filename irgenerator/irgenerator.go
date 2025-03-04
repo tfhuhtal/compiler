@@ -160,7 +160,6 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		}
 		newVar := g.newVar(e.Value.GetType())
 		st.Table[name] = newVar
-		fmt.Println(st.Table, value)
 		g.instructions = append(g.instructions, ir.Copy{
 			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 			Source:          value,
@@ -255,18 +254,33 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		for _, arg := range e.Args {
 			args = append(args, g.visit(st, arg))
 		}
-		name := e.GetName()
 		dest := g.newVar(utils.Unit{})
 		g.instructions = append(g.instructions, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
-			Fun:             name,
+			Fun:             e.Name.(ast.Identifier).Name,
 			Args:            args,
 			Dest:            dest,
 		})
 		return dest
 
 	case ast.Unary:
-		return "unary"
+		var ops []IRVar
+		for _, op := range e.Ops {
+			ops = append(ops, op)
+		}
+
+		opFun, found := st.Table[e.Exp.(ast.Identifier).Name]
+		if !found {
+			panic(fmt.Sprintf("Unknown unary operator: %s", e.Exp))
+		}
+		resVar := g.newVar(e.GetType())
+		g.instructions = append(g.instructions, ir.Call{
+			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
+			Fun:             opFun,
+			Args:            ops,
+			Dest:            resVar,
+		})
+		return resVar
 
 	default:
 		return ""

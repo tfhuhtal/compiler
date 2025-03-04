@@ -15,6 +15,7 @@ type Type = utils.Type
 type Instruction interface {
 	isInstruction()
 	String() string
+	GetVars() []IRVar
 }
 
 // BaseInstruction is embedded by all concrete instruction types.
@@ -38,6 +39,10 @@ func (l LoadBoolConst) String() string {
 	return fmt.Sprintf("LoadBoolConst(%v, %v)", l.Value, l.Dest)
 }
 
+func (l LoadBoolConst) GetVars() []IRVar {
+	return []IRVar{l.Dest}
+}
+
 // LoadIntConst represents loading an integer constant into Dest.
 type LoadIntConst struct {
 	BaseInstruction
@@ -47,6 +52,10 @@ type LoadIntConst struct {
 
 func (l LoadIntConst) String() string {
 	return fmt.Sprintf("LoadIntConst(%d, %v)", l.Value, l.Dest)
+}
+
+func (l LoadIntConst) GetVars() []IRVar {
+	return []IRVar{l.Dest}
 }
 
 // Copy represents copying a value from Source to Dest.
@@ -60,6 +69,10 @@ func (c Copy) String() string {
 	return fmt.Sprintf("Copy(%v, %v)", c.Source, c.Dest)
 }
 
+func (c Copy) GetVars() []IRVar {
+	return []IRVar{c.Source, c.Dest}
+}
+
 // Call represents calling a function or built-in.
 type Call struct {
 	BaseInstruction
@@ -70,10 +83,12 @@ type Call struct {
 
 func (c Call) String() string {
 	args := make([]string, len(c.Args))
-	for i, arg := range c.Args {
-		args[i] = arg
-	}
+	copy(args, c.Args)
 	return fmt.Sprintf("Call(%v, [%s], %v)", c.Fun, strings.Join(args, ", "), c.Dest)
+}
+
+func (c Call) GetVars() []IRVar {
+	return append([]IRVar{c.Dest}, c.Args...)
 }
 
 // Jump represents an unconditional jump.
@@ -84,6 +99,10 @@ type Jump struct {
 
 func (j Jump) String() string {
 	return fmt.Sprintf("Jump(%v)", j.Label)
+}
+
+func (j Jump) GetVars() []IRVar {
+	return nil
 }
 
 // CondJump represents a conditional jump.
@@ -98,6 +117,10 @@ func (c CondJump) String() string {
 	return fmt.Sprintf("CondJump(%v, %v, %v)", c.Cond, c.ThenLabel, c.ElseLabel)
 }
 
+func (c CondJump) GetVars() []IRVar {
+	return []IRVar{c.Cond}
+}
+
 // Label is used for jump targets.
 type Label struct {
 	BaseInstruction
@@ -106,4 +129,8 @@ type Label struct {
 
 func (l Label) String() string {
 	return fmt.Sprintf("Label(%s)", l.Label)
+}
+
+func (l Label) GetVars() []IRVar {
+	return nil
 }

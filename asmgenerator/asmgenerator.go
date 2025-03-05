@@ -113,7 +113,6 @@ func GenerateASM(instructions []ir.Instruction) string {
 			emit(fmt.Sprintf("movq $%d, %s\n", i.Value, loc))
 
 		case ir.Label:
-			emit(fmt.Sprintf("# %s", i.String()))
 			if i.String() != "" {
 				emit(fmt.Sprintf(".%s:\n", i.Label))
 			}
@@ -139,16 +138,26 @@ func GenerateASM(instructions []ir.Instruction) string {
 			emit(mov("%rax", locs.varToLocation[i.Dest]))
 			emit("\n")
 
+		case ir.CondJump:
+			emit(fmt.Sprintf("# %s", i.String()))
+			emit(fmt.Sprintf("cmpq $0, %s", locs.varToLocation[i.Cond]))
+			emit(fmt.Sprintf("jne .%s", i.ThenLabel))
+			emit(fmt.Sprintf("jmp .%s\n", i.ElseLabel))
+
+		case ir.Jump:
+			emit(fmt.Sprintf("# %s", i.String()))
+			emit(fmt.Sprintf("jmp .%s\n", i.Label.Label))
+
 		default:
 			emit(fmt.Sprintf("# Unhandled instruction: %v\n", i))
 		}
 	}
 
 	// Emit a minimal function epilogue
-	emit("    movq $0, %rax")
-	emit("    movq %rbp, %rsp")
-	emit("    popq %rbp")
-	emit("    ret")
+	emit("movq $0, %rax")
+	emit("movq %rbp, %rsp")
+	emit("popq %rbp")
+	emit("ret")
 
 	// Optionally append standard library stubs if needed
 	return strings.Join(lines, "\n")
@@ -263,16 +272,40 @@ func operatorFromStr(op string, argCount int) (Symbol, bool) {
 		if argCount == 2 {
 			return Symbol{op: Div}, true
 		}
+	case "==":
+		if argCount == 2 {
+			return Symbol{op: Equals}, true
+		}
+	case "!=":
+		if argCount == 2 {
+			return Symbol{op: NotEquals}, true
+		}
+	case ">":
+		if argCount == 2 {
+			return Symbol{op: GT}, true
+		}
+	case ">=":
+		if argCount == 2 {
+			return Symbol{op: GTE}, true
+		}
+	case "<":
+		if argCount == 2 {
+			return Symbol{op: LT}, true
+		}
+	case "<=":
+		if argCount == 2 {
+			return Symbol{op: LTE}, true
+		}
 	}
 	return Symbol{}, false
 }
 
 func comparison(a *string, b *string, setInstr string) []string {
 	return []string{
-		mov(*a, "%rax"),
-		fmt.Sprintf("cmpq %s, %%rax", *b),
+		fmt.Sprintf("xor %%rax, %%rax"),
+		mov(*a, "%rdx"),
+		fmt.Sprintf("cmpq %s, %%rdx", *b),
 		fmt.Sprintf("%s %%al", setInstr),
-		"movzbq %al, %rax",
 	}
 }
 

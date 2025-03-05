@@ -40,7 +40,10 @@ func callCompiler(sourceCode string, file string) string {
 	rootTypes["%"] = utils.Int{}
 	rootTypes["=="] = utils.Int{}
 	rootTypes["/"] = utils.Int{}
-	rootTypes["print_int"] = utils.Unit{}
+	rootTypes["<="] = utils.Int{}
+	rootTypes["<"] = utils.Int{}
+	rootTypes[">="] = utils.Int{}
+	rootTypes["!="] = utils.Int{}
 
 	gen := irgenerator.NewIRGenerator(rootTypes)
 	instructions := gen.Generate(res)
@@ -149,7 +152,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		asm := callCompiler("var n: Int = read_int();print_int(n)", inputFile)
+		asm := callCompiler("var n: Int = read_int();while n < 100 do {print_int(n);n = n + 1;}", inputFile)
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)

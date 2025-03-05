@@ -56,7 +56,6 @@ func collectAllVars(instructions []ir.Instruction) []ir.IRVar {
 			}
 		}
 	}
-	fmt.Println(varList)
 	return varList
 }
 
@@ -78,8 +77,6 @@ func GenerateASM(instructions []ir.Instruction) string {
 		locs.varToLocation[v] = fmt.Sprintf("%d(%%rbp)", offset)
 	}
 
-	fmt.Println(locs)
-
 	// Align to 16 bytes if desired:
 	if locs.stackUsed%2 != 0 {
 		locs.stackUsed++
@@ -91,6 +88,9 @@ func GenerateASM(instructions []ir.Instruction) string {
 	emit(".global main")
 	emit(".type main, @function")
 	emit("main:")
+	for k, v := range locs.varToLocation {
+		emit(fmt.Sprintf("# %s in %s", k, v))
+	}
 	emit("    pushq %rbp")
 	emit("    movq %rsp, %rbp")
 	emit(fmt.Sprintf("    subq $%d, %%rsp\n", stackFrameSize))
@@ -141,8 +141,8 @@ func GenerateASM(instructions []ir.Instruction) string {
 		case ir.CondJump:
 			emit(fmt.Sprintf("# %s", i.String()))
 			emit(fmt.Sprintf("cmpq $0, %s", locs.varToLocation[i.Cond]))
-			emit(fmt.Sprintf("jne .%s", i.ThenLabel))
-			emit(fmt.Sprintf("jmp .%s\n", i.ElseLabel))
+			emit(fmt.Sprintf("jne .%s", i.ThenLabel.Label))
+			emit(fmt.Sprintf("jmp .%s\n", i.ElseLabel.Label))
 
 		case ir.Jump:
 			emit(fmt.Sprintf("# %s", i.String()))

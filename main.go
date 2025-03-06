@@ -2,6 +2,7 @@ package main
 
 import (
 	"compiler/asmgenerator"
+	"compiler/assembler"
 	"compiler/irgenerator"
 	"compiler/parser"
 	"compiler/tokenizer"
@@ -11,94 +12,114 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
+	"net"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-type Input struct {
-	Command string `json:"command"`
-	Code    string `json:"code,omitempty"`
-}
+func callCompiler(sourceCode string, file string) []byte {
+	var output []byte
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered from panic:", r)
+			output = []byte(fmt.Sprintf("compiler error: %s", r))
+		}
+	}()
 
-type Result struct {
-	Program string `json:"program,omitempty"`
-	Error   string `json:"error,omitempty"`
-}
-
-func callCompiler(sourceCode string, file string) string {
 	tokens := tokenizer.Tokenize(sourceCode, file)
 	p := parser.New(tokens)
 	res := p.Parse()
+	fmt.Println(res)
+	fmt.Println("")
 	typechecker.Type(res)
-	var rootTypes = make(map[irgenerator.IRVar]utils.Type)
-	rootTypes["+"] = utils.Int{}
-	rootTypes["*"] = utils.Int{}
-	rootTypes[">"] = utils.Bool{}
-	rootTypes["%"] = utils.Int{}
-	rootTypes["=="] = utils.Int{}
-	rootTypes["/"] = utils.Int{}
-	rootTypes["<="] = utils.Int{}
-	rootTypes["<"] = utils.Int{}
-	rootTypes[">="] = utils.Int{}
-	rootTypes["!="] = utils.Int{}
+
+	rootTypes := map[irgenerator.IRVar]utils.Type{
+		"+":   utils.Int{},
+		"*":   utils.Int{},
+		"/":   utils.Int{},
+		"%":   utils.Int{},
+		"-":   utils.Int{},
+		">":   utils.Bool{},
+		"==":  utils.Bool{},
+		"<=":  utils.Bool{},
+		"<":   utils.Bool{},
+		">=":  utils.Bool{},
+		"!=":  utils.Bool{},
+		"and": utils.Bool{},
+		"or":  utils.Bool{},
+	}
 
 	gen := irgenerator.NewIRGenerator(rootTypes)
 	instructions := gen.Generate(res)
-
+	fmt.Println(instructions)
+	fmt.Println("")
 	asm := asmgenerator.GenerateASM(instructions)
-	return asm
+	fmt.Println(asm)
+
+	output, _ = assembler.Assemble(asm, "")
+	return output
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+	body, err := io.ReadAll(conn)
 	if err != nil {
-		http.Error(w, "Failed to read request", http.StatusBadRequest)
+		resp, _ := json.Marshal(map[string]string{"error": err.Error()})
+		conn.Write(resp)
 		return
 	}
 
-	defer r.Body.Close()
-
-	var input Input
-	if err := json.Unmarshal(body, &input); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+	var inputMap map[string]interface{}
+	if err := json.Unmarshal(body, &inputMap); err != nil {
+		resp, _ := json.Marshal(map[string]string{"error": err.Error()})
+		conn.Write(resp)
 		return
 	}
 
-	var result Result
+	cmd, _ := inputMap["command"].(string)
+	code, _ := inputMap["code"].(string)
+	result := map[string]string{}
 
-	switch input.Command {
+	switch cmd {
 	case "compile":
-		compiled := callCompiler(input.Code, "test")
-		result.Program = base64.StdEncoding.EncodeToString([]byte(compiled))
+		executable := callCompiler(code, "")
+		if strings.HasPrefix(string(executable), "compiler error:") || len(executable) == 0 {
+			resp, _ := json.Marshal(map[string]string{"error": string(executable)})
+			conn.Write(resp)
+			return
+		} else {
+			result["program"] = base64.StdEncoding.EncodeToString(executable)
+		}
 	case "ping":
-		// no operation
 	default:
-		result.Error = fmt.Sprintf("Unknown command: %s", input.Command)
+		result["error"] = fmt.Sprintf("Unknown command: %s", cmd)
 	}
-	w.Header().Set("Content-type", "application/json")
-	json.NewEncoder(w).Encode(result)
+
+	resp, err := json.Marshal(result)
+	if err == nil {
+		conn.Write(resp)
+	}
 }
 
 func runServer(host string, port int) {
 	address := fmt.Sprintf("%s:%d", host, port)
-	fmt.Println("Server running on:", address)
-
-	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("pong\n"))
-			return
-		}
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	})
-
-	http.HandleFunc("/", handler)
-
-	if err := http.ListenAndServe(address, nil); err != nil {
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
 		fmt.Println("Error:", err)
+		return
+	}
+	defer listener.Close()
+	fmt.Println("TCP server running on:", address)
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Println("Error:", err)
+			continue
+		}
+		go handleConnection(conn)
 	}
 }
 
@@ -152,7 +173,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		asm := callCompiler("var n: Int = read_int();while n < 100 do {print_int(n);n = n + 1;}", inputFile)
+		asm := callCompiler("var x = 3;var y = 4;x = y;x", inputFile)
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)

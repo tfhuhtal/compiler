@@ -30,6 +30,8 @@ var allowedIdentifiers = []string{
 	"not",
 	"true",
 	"false",
+	"and",
+	"or",
 }
 
 func contains(slice []string, item string) bool {
@@ -353,19 +355,21 @@ func (p *Parser) parseTypeExpression() ast.Expression {
 func (p *Parser) parseTopExpression(list []string, allow bool) ast.Expression {
 	if p.peek().Text == "var" {
 		p.consume("var")
-		decl := p.parseExpression(append([]string{":"}, list...), allow)
+		decl := p.parseIdentifier()
+		var typed ast.Expression
 		if p.peek().Text == ":" {
 			p.consume(":")
-			typed := p.parseTypeExpression()
-			p.consume("=")
-			declVal := p.parseExpression(list, allow)
-			return ast.Declaration{
-				Location: decl.GetLocation(),
-				Variable: decl,
-				Value:    declVal,
-				Typed:    typed,
-				Type:     utils.Unit{},
-			}
+			typed = p.parseTypeExpression()
+		}
+
+		p.consume("=")
+		declVal := p.parseExpression(list, allow)
+		return ast.Declaration{
+			Location: decl.GetLocation(),
+			Variable: decl,
+			Value:    declVal,
+			Typed:    typed,
+			Type:     utils.Unit{},
 		}
 	}
 	return p.parseExpression(list, allow)

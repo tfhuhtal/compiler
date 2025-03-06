@@ -39,6 +39,8 @@ func (g *IRGenerator) Generate(rootExpr ast.Expression) []ir.Instruction {
 	}
 	result := g.visit(rootSymTab, rootExpr)
 
+	fmt.Println(g.varTypes)
+
 	if _, ok := g.varTypes[result].(utils.Int); ok {
 		g.instructions = append(g.instructions, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: rootExpr.GetLocation()},
@@ -118,6 +120,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		panic("Unsupported boolean literal")
 
 	case ast.Identifier:
+		fmt.Println(st.Table)
 		if _, exists := st.Table[e.Name]; !exists {
 			panic(fmt.Sprintf("Undefined variable: %s, in location %v", e.Name, e.GetLocation()))
 		}
@@ -125,7 +128,6 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 
 	case ast.BinaryOp:
 		left := g.visit(st, e.Left)
-		right := g.visit(st, e.Right)
 		if e.Op == "=" {
 			res := g.newVar(g.varTypes[left])
 			g.instructions = append(g.instructions, ir.Copy{
@@ -135,12 +137,66 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 			})
 
 			return left
+
+		} else if e.Op == "and" || e.Op == "or" {
+			rightLabel := g.newLabel()
+			leftLabel := g.newLabel()
+
+			if e.Op == "and" {
+				g.instructions = append(g.instructions, ir.CondJump{
+					BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
+					Cond:            left,
+					ThenLabel:       rightLabel,
+					ElseLabel:       leftLabel,
+				})
+			} else {
+				g.instructions = append(g.instructions, ir.CondJump{
+					BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
+					Cond:            left,
+					ThenLabel:       leftLabel,
+					ElseLabel:       rightLabel,
+				})
+			}
+
+			g.instructions = append(g.instructions, rightLabel)
+			right := g.visit(st, e.Right)
+			newVar := g.newVar(utils.Bool{})
+			g.instructions = append(g.instructions, ir.Copy{
+				BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
+				Source:          right,
+				Dest:            newVar,
+			})
+			endLabel := g.newLabel()
+			g.instructions = append(g.instructions, ir.Jump{
+				BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
+				Label:           endLabel,
+			})
+
+			g.instructions = append(g.instructions, leftLabel)
+			var value bool
+			if e.Op == "and" {
+				value = false
+			} else {
+				value = true
+			}
+
+			g.instructions = append(g.instructions, ir.LoadBoolConst{
+				BaseInstruction: ir.BaseInstruction{Location: e.Right.GetLocation()},
+				Value:           value,
+				Dest:            newVar,
+			})
+
+			g.instructions = append(g.instructions, ir.Jump{BaseInstruction: ir.BaseInstruction{}, Label: endLabel})
+			g.instructions = append(g.instructions, endLabel)
+
+			return newVar
 		}
+		right := g.visit(st, e.Right)
 		varOp, exists := st.Table[e.Op]
 		if !exists {
 			panic(fmt.Sprintf("Unknown operator: %s", e.Op))
 		}
-		res := g.newVar(g.varTypes[left])
+		res := g.newVar(g.varTypes[varOp])
 		g.instructions = append(g.instructions, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 			Fun:             varOp,

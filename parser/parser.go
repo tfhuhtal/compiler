@@ -171,15 +171,15 @@ func (p *Parser) parseBooleanLiteral() ast.BooleanLiteral {
 }
 
 func (p *Parser) parseUnary(list []string, allow bool) ast.Expression {
-	token := p.peek()
 	var operators []string
-	for token.Text == "not" || token.Text == "-" {
-		operators = append(operators, token.Text)
+	for p.peek().Text == "not" || p.peek().Text == "-" {
+		operators = append(operators, p.peek().Text)
+		p.consume(nil)
 	}
 	factor := p.parseFactor(list, allow)
 	if len(operators) > 0 {
 		factor = ast.Unary{
-			Location: token.Location,
+			Location: p.peek().Location,
 			Ops:      operators,
 			Exp:      factor,
 			Type:     utils.Unit{},

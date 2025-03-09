@@ -173,7 +173,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		asm := callCompiler("var x = 3;var y = 4;x = y;x", inputFile)
+		asm := callCompiler("print_int(-3);", inputFile)
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)

@@ -178,8 +178,6 @@ func generateCall(fun ir.IRVar, args []ir.IRVar, locs *Locals) []string {
 		callee = Symbol{value: fun}
 	}
 
-	fmt.Println(callee.value, callee.op)
-
 	switch {
 	case callee.value == "":
 		if len(args) == 2 {

@@ -39,8 +39,6 @@ func (g *IRGenerator) Generate(rootExpr ast.Expression) []ir.Instruction {
 	}
 	result := g.visit(rootSymTab, rootExpr)
 
-	fmt.Println(result, g.varTypes[result])
-
 	if _, ok := g.varTypes[result].(utils.Int); ok {
 		g.instructions = append(g.instructions, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: rootExpr.GetLocation()},

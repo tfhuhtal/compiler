@@ -178,7 +178,6 @@ func (p *Parser) parseUnary(list []string, allow bool) ast.Expression {
 		p.consume(nil)
 	}
 	factor := p.parseFactor(list, allow)
-	fmt.Println(factor, "factor")
 	if operator != "" {
 		factor = ast.Unary{
 			Location: p.peek().Location,
@@ -250,11 +249,16 @@ func (p *Parser) parseTermPrecedence(precedence int, list []string, allow bool) 
 
 func (p *Parser) parseFactor(list []string, allow bool) ast.Expression {
 	token := p.peek()
+	fmt.Println(token, "token at parseFactor")
 	var res ast.Expression
-	if token.Text == "{" {
-		res = p.parseBlock()
-	} else if token.Text == "(" {
-		res = p.parseParenthesised(list, allow)
+	if token.Type == "Punctuation" {
+		if token.Text == "{" {
+			res = p.parseBlock()
+		} else if token.Text == "(" {
+			res = p.parseParenthesised(list, allow)
+		} else {
+			panic(fmt.Sprintf("Unexpected token %v, expexted left brace", token.Text))
+		}
 	} else if token.Text == "if" {
 		res = p.parseIfExpression(list, allow)
 	} else if token.Text == "var" {
@@ -265,6 +269,11 @@ func (p *Parser) parseFactor(list []string, allow bool) ast.Expression {
 		res = p.parseWhileLoop()
 	} else if token.Type == "IntLiteral" {
 		res = p.parseIntLiteral()
+		if p.peek().Type == "IntLiteral" {
+			panic(fmt.Sprintf(
+				"Two consecutive int literals %s, %s",
+				p.peekPrev().Text, p.peek().Text))
+		}
 	} else if token.Type == "Identifier" {
 		if p.peekPrev().Type == "Identifier" && !contains(allowedIdentifiers, p.peekPrev().Text) {
 			panic("Not allowed Identifier: " + p.peekPrev().Text)

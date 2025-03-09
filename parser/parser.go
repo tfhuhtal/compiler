@@ -4,6 +4,7 @@ import (
 	"compiler/ast"
 	"compiler/tokenizer"
 	"compiler/utils"
+	"fmt"
 	"strconv"
 )
 
@@ -110,7 +111,7 @@ func (p *Parser) parseIntLiteral() ast.Literal {
 		panic("Not int literal")
 	}
 	consumedToken := p.consume(nil)
-	value, err := strconv.Atoi(consumedToken.Text)
+	value, err := strconv.ParseUint(consumedToken.Text, 10, 64)
 	if err != nil {
 		panic(err)
 	}
@@ -177,6 +178,7 @@ func (p *Parser) parseUnary(list []string, allow bool) ast.Expression {
 		p.consume(nil)
 	}
 	factor := p.parseFactor(list, allow)
+	fmt.Println(factor, "factor")
 	if operator != "" {
 		factor = ast.Unary{
 			Location: p.peek().Location,

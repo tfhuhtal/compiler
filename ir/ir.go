@@ -46,7 +46,7 @@ func (l LoadBoolConst) GetVars() []IRVar {
 // LoadIntConst represents loading an integer constant into Dest.
 type LoadIntConst struct {
 	BaseInstruction
-	Value int
+	Value uint64
 	Dest  IRVar
 }
 

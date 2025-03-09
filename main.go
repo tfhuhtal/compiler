@@ -29,6 +29,8 @@ func callCompiler(sourceCode string, file string) []byte {
 	}()
 
 	tokens := tokenizer.Tokenize(sourceCode, file)
+	fmt.Println(tokens)
+	fmt.Println("")
 	p := parser.New(tokens)
 	res := p.Parse()
 	fmt.Println(res)
@@ -174,7 +176,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		asm := callCompiler("var x = 3;var y = 4;x = y;x", inputFile)
+		asm := callCompiler("print_int(-9);", inputFile)
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)

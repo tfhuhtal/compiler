@@ -3,6 +3,7 @@ package asmgenerator
 import (
 	"compiler/ir"
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -110,7 +111,12 @@ func GenerateASM(instructions []ir.Instruction) string {
 		case ir.LoadIntConst:
 			emit(fmt.Sprintf("# %s", i.String()))
 			loc := locs.varToLocation[i.Dest]
-			emit(fmt.Sprintf("movq $%d, %s\n", i.Value, loc))
+			if i.Value > math.MaxUint32 {
+				emit(fmt.Sprintf("movabsq $%d, %%rax", i.Value))
+				emit(fmt.Sprintf("movq %%rax, %s\n", loc))
+			} else {
+				emit(fmt.Sprintf("movq $%d, %s\n", i.Value, loc))
+			}
 
 		case ir.Label:
 			if i.String() != "" {

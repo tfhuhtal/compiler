@@ -93,7 +93,7 @@ func (g *IRGenerator) newLabel() ir.Label {
 func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 	switch e := expr.(type) {
 	case ast.Literal:
-		if value, ok := e.Value.(int); ok {
+		if value, ok := e.Value.(uint64); ok {
 			variable := g.newVar(utils.Int{Name: "Int"})
 			g.instructions = append(g.instructions, ir.LoadIntConst{
 				BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},

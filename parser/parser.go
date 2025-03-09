@@ -137,7 +137,8 @@ func (p *Parser) parseIdentifier() ast.Identifier {
 
 func (p *Parser) parseParenthesised(list []string, allow bool) ast.Expression {
 	p.consume("(")
-	expr := p.parseExpression(append([]string{")"}, list...), allow)
+	var expr ast.Expression
+	expr = p.parseExpression(append([]string{")"}, list...), allow)
 	p.consume(")")
 	return expr
 }
@@ -249,7 +250,6 @@ func (p *Parser) parseTermPrecedence(precedence int, list []string, allow bool) 
 
 func (p *Parser) parseFactor(list []string, allow bool) ast.Expression {
 	token := p.peek()
-	fmt.Println(token, "token at parseFactor")
 	var res ast.Expression
 	if token.Type == "Punctuation" {
 		if token.Text == "{" {
@@ -257,7 +257,7 @@ func (p *Parser) parseFactor(list []string, allow bool) ast.Expression {
 		} else if token.Text == "(" {
 			res = p.parseParenthesised(list, allow)
 		} else {
-			panic(fmt.Sprintf("Unexpected token %v, expexted left brace", token.Text))
+			panic(fmt.Sprintf("Unexpected token %v, expexted left brace", p.peek().Text))
 		}
 	} else if token.Text == "if" {
 		res = p.parseIfExpression(list, allow)
@@ -279,6 +279,8 @@ func (p *Parser) parseFactor(list []string, allow bool) ast.Expression {
 			panic("Not allowed Identifier: " + p.peekPrev().Text)
 		}
 		res = p.parseIdentifier()
+	} else if token.Type == "" {
+		panic("Invalid end of code")
 	}
 	if p.peek().Text == "(" {
 		res = p.parseFunction(list, allow, res)
@@ -290,12 +292,14 @@ func (p *Parser) parseFunction(list []string, allow bool, callee ast.Expression)
 	var args []ast.Expression
 	loc := p.peek().Location
 	p.consume("(")
-	exprs := p.parseExpression(append([]string{",", ")"}, list...), allow)
-	args = append(args, exprs)
-	for p.peek().Text == "," {
-		p.consume(",")
-		exprs = p.parseExpression(append([]string{",", ")"}, list...), allow)
+	if p.peek().Text != ")" {
+		exprs := p.parseExpression(append([]string{",", ")"}, list...), allow)
 		args = append(args, exprs)
+		for p.peek().Text == "," {
+			p.consume(",")
+			exprs = p.parseExpression(append([]string{",", ")"}, list...), allow)
+			args = append(args, exprs)
+		}
 	}
 	p.consume(")")
 	return ast.Function{

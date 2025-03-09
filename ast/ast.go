@@ -85,7 +85,7 @@ func (b BooleanLiteral) GetLocation() Location {
 }
 
 type Unary struct {
-	Ops      []string
+	Op       string
 	Exp      Expression
 	Location Location
 	Type     utils.Type

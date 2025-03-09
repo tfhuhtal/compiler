@@ -39,7 +39,7 @@ func (g *IRGenerator) Generate(rootExpr ast.Expression) []ir.Instruction {
 	}
 	result := g.visit(rootSymTab, rootExpr)
 
-	fmt.Println(g.varTypes)
+	fmt.Println(result, g.varTypes[result])
 
 	if _, ok := g.varTypes[result].(utils.Int); ok {
 		g.instructions = append(g.instructions, ir.Call{
@@ -120,7 +120,6 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		panic("Unsupported boolean literal")
 
 	case ast.Identifier:
-		fmt.Println(st.Table)
 		if _, exists := st.Table[e.Name]; !exists {
 			panic(fmt.Sprintf("Undefined variable: %s, in location %v", e.Name, e.GetLocation()))
 		}
@@ -129,10 +128,10 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 	case ast.BinaryOp:
 		left := g.visit(st, e.Left)
 		if e.Op == "=" {
-			res := g.newVar(g.varTypes[left])
+			right := g.visit(st, e.Right)
 			g.instructions = append(g.instructions, ir.Copy{
 				BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
-				Source:          res,
+				Source:          right,
 				Dest:            left,
 			})
 
@@ -214,7 +213,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		if _, exists := st.Table[name]; exists {
 			panic(fmt.Sprintf("%s already declared", e.Variable))
 		}
-		newVar := g.newVar(e.Value.GetType())
+		newVar := g.newVar(g.varTypes[value])
 		st.Table[name] = newVar
 		g.instructions = append(g.instructions, ir.Copy{
 			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
@@ -298,11 +297,6 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		if e.Result != nil {
 			res = g.visit(st, e.Result)
 		}
-		/*g.instructions = append(g.instructions, ir.Copy{*/
-		/*BaseInstruction: ir.BaseInstruction{Location: loc},*/
-		/*Source:          exprs,*/
-		/*Dest:            res,*/
-		/*})*/
 		return res
 
 	case ast.Function:
@@ -320,23 +314,17 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		return dest
 
 	case ast.Unary:
-		var ops []IRVar
-		for _, op := range e.Ops {
-			ops = append(ops, op)
-		}
-
-		opFun, found := st.Table[e.Exp.(ast.Identifier).Name]
-		if !found {
-			panic(fmt.Sprintf("Unknown unary operator: %s", e.Exp))
-		}
-		resVar := g.newVar(e.GetType())
+		var args []IRVar
+		args = append(args, g.visit(st, e.Exp))
+		dest := g.newVar(g.varTypes[args[0]])
 		g.instructions = append(g.instructions, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
-			Fun:             opFun,
-			Args:            ops,
-			Dest:            resVar,
+			Fun:             fmt.Sprintf("unary_%s", e.Op),
+			Args:            args,
+			Dest:            dest,
 		})
-		return resVar
+
+		return dest
 
 	default:
 		return ""

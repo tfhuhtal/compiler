@@ -172,8 +172,10 @@ func generateCall(fun ir.IRVar, args []ir.IRVar, locs *Locals) []string {
 		callee = Symbol{value: fun}
 	}
 
+	fmt.Println(callee.value, callee.op)
+
 	switch {
-	case callee.value == "" && callee.op != 0:
+	case callee.value == "":
 		if len(args) == 2 {
 			arg1Loc := locs.varToLocation[args[0]]
 			arg2Loc := locs.varToLocation[args[1]]
@@ -253,48 +255,35 @@ func generateFunctionCall(fun ir.IRVar, args []ir.IRVar, locs *Locals) []string 
 }
 
 func operatorFromStr(op string, argCount int) (Symbol, bool) {
-	switch op {
-	case "+":
-		if argCount == 2 {
+	if argCount == 2 {
+		switch op {
+		case "+":
 			return Symbol{op: Add}, true
-		}
-	case "-":
-		if argCount == 1 {
-			return Symbol{op: UnarySub}, true
-		} else if argCount == 2 {
+		case "-":
 			return Symbol{op: Sub}, true
-		}
-	case "*":
-		if argCount == 2 {
+		case "*":
 			return Symbol{op: Mul}, true
-		}
-	case "/":
-		if argCount == 2 {
+		case "/":
 			return Symbol{op: Div}, true
-		}
-	case "==":
-		if argCount == 2 {
+		case "==":
 			return Symbol{op: Equals}, true
-		}
-	case "!=":
-		if argCount == 2 {
+		case "!=":
 			return Symbol{op: NotEquals}, true
-		}
-	case ">":
-		if argCount == 2 {
+		case ">":
 			return Symbol{op: GT}, true
-		}
-	case ">=":
-		if argCount == 2 {
+		case ">=":
 			return Symbol{op: GTE}, true
-		}
-	case "<":
-		if argCount == 2 {
+		case "<":
 			return Symbol{op: LT}, true
-		}
-	case "<=":
-		if argCount == 2 {
+		case "<=":
 			return Symbol{op: LTE}, true
+		}
+	} else if argCount == 1 {
+		switch op {
+		case "unary_-":
+			return Symbol{op: UnarySub}, true
+		case "not":
+			return Symbol{op: Not}, true
 		}
 	}
 	return Symbol{}, false

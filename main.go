@@ -51,8 +51,9 @@ func callCompiler(sourceCode string, file string) []byte {
 
 	gen := irgenerator.NewIRGenerator(rootTypes)
 	instructions := gen.Generate(res)
+
 	asm := asmgenerator.GenerateASM(instructions)
-	fmt.Println(asm)
+
 	output, _ = assembler.Assemble(asm, "")
 	return output
 }
@@ -168,7 +169,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		asm := callCompiler("read_int();", inputFile)
+		asm := callCompiler("var i = 0;while i <= 3 do {if i % 2 == 1 then {print_int(i);}i = i + 1;}", inputFile)
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)

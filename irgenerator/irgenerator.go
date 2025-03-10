@@ -228,7 +228,19 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 			elseLabel = g.newLabel()
 		}
 		condVar := g.visit(st, e.Condition)
-		copyVar := g.newVar(utils.Int{Name: "copy"})
+		copyVar := "unit"
+		switch e.Then.(type) {
+		case ast.Block:
+			copyVar = g.newVar(utils.Unit{})
+		case ast.Literal:
+			copyVar = g.newVar(utils.Int{})
+		case ast.BinaryOp:
+			copyVar = g.newVar(utils.Int{})
+		case ast.BooleanLiteral:
+			copyVar = g.newVar(utils.Bool{})
+		case ast.IfExpression:
+			copyVar = g.newVar(utils.Int{})
+		}
 		g.instructions = append(g.instructions, ir.CondJump{
 			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 			Cond:            condVar,
@@ -264,6 +276,9 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		whileStartLabel := g.newLabel()
 		g.instructions = append(g.instructions, whileStartLabel)
 		condVar := g.visit(st, e.Condition)
+		if _, ok := g.varTypes[condVar].(utils.Bool); !ok {
+			panic(fmt.Sprintf("Conditional should be boolean %s", g.varTypes[condVar]))
+		}
 		whileBodyLabel := g.newLabel()
 		whileEndLabel := g.newLabel()
 		g.instructions = append(g.instructions, ir.CondJump{

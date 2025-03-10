@@ -127,9 +127,7 @@ func GenerateASM(instructions []ir.Instruction) string {
 			emit(fmt.Sprintf("# %s", i.String()))
 			if i.Fun == "print_int" || i.Fun == "read_int" {
 				emit("subq $8, %rsp")
-				fmt.Println("generateCall")
 				lines = append(lines, generateCall(i.Fun, i.Args, &locs)...)
-				fmt.Println("after append")
 				emit(mov("%rax", locs.varToLocation[i.Dest]))
 				emit("add $8, %rsp\n")
 
@@ -271,6 +269,8 @@ func operatorFromStr(op string, argCount int) (Symbol, bool) {
 			return Symbol{op: Mul}, true
 		case "/":
 			return Symbol{op: Div}, true
+		case "%":
+			return Symbol{op: Mod}, true
 		case "==":
 			return Symbol{op: Equals}, true
 		case "!=":

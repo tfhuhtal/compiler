@@ -127,7 +127,9 @@ func GenerateASM(instructions []ir.Instruction) string {
 			emit(fmt.Sprintf("# %s", i.String()))
 			if i.Fun == "print_int" || i.Fun == "read_int" {
 				emit("subq $8, %rsp")
+				fmt.Println("generateCall")
 				lines = append(lines, generateCall(i.Fun, i.Args, &locs)...)
+				fmt.Println("after append")
 				emit(mov("%rax", locs.varToLocation[i.Dest]))
 				emit("add $8, %rsp\n")
 
@@ -250,7 +252,7 @@ func generateCall(fun ir.IRVar, args []ir.IRVar, locs *Locals) []string {
 func generateFunctionCall(fun ir.IRVar, args []ir.IRVar, locs *Locals) []string {
 	lines := []string{}
 
-	if args[0] != "" {
+	if len(args) > 0 && args[0] != "" {
 		lines = append(lines, mov(locs.varToLocation[args[0]], "%rdi"))
 	}
 	lines = append(lines, fmt.Sprintf("callq %s", fun))

@@ -136,6 +136,8 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 			if _, ok := params[len(params)-1].(utils.Bool); !ok {
 				panic("params should be bool")
 			}
+		} else if n.Name.(ast.Identifier).Name == "read_int" {
+			return utils.Int{Name: "Int"}
 		}
 		res := typecheck(n.Name, symTab)
 		return utils.Fun{

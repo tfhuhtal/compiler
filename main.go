@@ -59,11 +59,11 @@ func callCompiler(sourceCode string, file string) []byte {
 	/*fmt.Println(i)*/
 	/*}*/
 
-	asm := asmgenerator.GenerateASM(instructions)
+	asmgenerator.GenerateASM(instructions)
 
 	/*fmt.Println(asm)*/
 
-	output, _ = assembler.Assemble(asm, "")
+	output, _ = assembler.Assemble("", "")
 	return output
 }
 
@@ -178,7 +178,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		asm := callCompiler("var x = 3", inputFile)
+		asm := callCompiler("var n: Int = read_int();print_int(n);while n > 1 do {if n % 2 == 0 then {n = n / 2;} else {n = 3*n + 1;}print_int(n);}", inputFile)
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)

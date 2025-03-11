@@ -139,6 +139,9 @@ func (p *Parser) parseParenthesised(list []string, allow bool) ast.Expression {
 	p.consume("(")
 	var expr ast.Expression
 	expr = p.parseExpression(append([]string{")"}, list...), allow)
+	if p.peek().Text != ")" {
+		panic(fmt.Sprintf("Token should be left paren ), but is %s", p.peek().Text))
+	}
 	p.consume(")")
 	return expr
 }
@@ -181,10 +184,10 @@ func (p *Parser) parseUnary(list []string, allow bool) ast.Expression {
 	factor := p.parseFactor(list, allow)
 	if operator != "" {
 		factor = ast.Unary{
-			Location: p.peek().Location,
 			Op:       operator,
 			Exp:      factor,
 			Type:     utils.Unit{},
+			Location: p.peek().Location,
 		}
 	}
 	return factor
@@ -204,27 +207,10 @@ func (p *Parser) parseWhileLoop() ast.Expression {
 	}
 }
 
-func (p *Parser) parseTerm(list []string, allow bool) ast.Expression {
-	left := p.parseUnary(list, allow)
-	for p.peek().Text == "*" || p.peek().Text == "/" || p.peek().Text == "%" {
-		operatorToken := p.consume(nil)
-		operator := operatorToken.Text
-		right := p.parseUnary(list, allow)
-		left = ast.BinaryOp{
-			Location: left.GetLocation(),
-			Left:     left,
-			Op:       operator,
-			Right:    right,
-			Type:     utils.Unit{},
-		}
-	}
-	return left
-}
-
 func (p *Parser) parseTermPrecedence(precedence int, list []string, allow bool) ast.Expression {
 	var left ast.Expression
 	if precedence == len(precedenceLevels)-1 {
-		left = p.parseTerm(list, allow)
+		left = p.parseUnary(list, allow)
 	} else {
 		left = p.parseTermPrecedence(precedence+1, list, allow)
 	}
@@ -233,7 +219,7 @@ func (p *Parser) parseTermPrecedence(precedence int, list []string, allow bool) 
 		operator := operatorToken.Text
 		var right ast.Expression
 		if precedence == len(precedenceLevels)-1 {
-			right = p.parseTerm(list, allow)
+			right = p.parseUnary(list, allow)
 		} else {
 			right = p.parseTermPrecedence(precedence+1, list, allow)
 		}

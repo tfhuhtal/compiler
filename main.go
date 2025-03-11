@@ -20,6 +20,7 @@ import (
 )
 
 func callCompiler(sourceCode string, file string) []byte {
+	fmt.Println(sourceCode)
 	var output []byte
 	defer func() {
 		if r := recover(); r != nil {
@@ -32,6 +33,8 @@ func callCompiler(sourceCode string, file string) []byte {
 	p := parser.New(tokens)
 	res := p.Parse()
 	typechecker.Type(res)
+
+	fmt.Println(res)
 
 	rootTypes := map[irgenerator.IRVar]utils.Type{
 		"+":   utils.Int{},
@@ -52,7 +55,13 @@ func callCompiler(sourceCode string, file string) []byte {
 	gen := irgenerator.NewIRGenerator(rootTypes)
 	instructions := gen.Generate(res)
 
+	for _, i := range instructions {
+		fmt.Println(i)
+	}
+
 	asm := asmgenerator.GenerateASM(instructions)
+
+	fmt.Println(asm)
 
 	output, _ = assembler.Assemble(asm, "")
 	return output
@@ -169,7 +178,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		asm := callCompiler("var i = 0;while i <= 3 do {if i % 2 == 1 then {print_int(i);}i = i + 1;}", inputFile)
+		asm := callCompiler("-1 * 2", inputFile)
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)

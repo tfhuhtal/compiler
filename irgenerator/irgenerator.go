@@ -209,7 +209,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 			name = identifier.Name
 		}
 		if _, exists := st.Table[name]; exists {
-			panic(fmt.Sprintf("%s already declared", e.Variable))
+			panic(fmt.Sprintf("%v already declared", e.Variable))
 		}
 		newVar := g.newVar(g.varTypes[value])
 		st.Table[name] = newVar
@@ -304,15 +304,16 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		}
 
 		for _, expr := range e.Expressions {
-			g.visit(st, expr)
+			g.visit(innerTable, expr)
 		}
 		res := "unit"
 		if e.Result != nil {
-			res = g.visit(st, e.Result)
+			res = g.visit(innerTable, e.Result)
 		}
 		return res
 
 	case ast.Function:
+		fmt.Println("here in function")
 		var args []IRVar
 		for _, arg := range e.Args {
 			args = append(args, g.visit(st, arg))

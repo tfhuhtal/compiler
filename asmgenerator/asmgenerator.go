@@ -84,6 +84,8 @@ func GenerateASM(instructions []ir.Instruction) string {
 	}
 	stackFrameSize := locs.stackUsed * 8
 
+	unaryPrint := false
+
 	// Emit a minimal function prologue
 	emit(".extern print_int\n.extern print_bool\n.extern read_int\n.section .text\n\n")
 	emit(".global main")
@@ -125,12 +127,20 @@ func GenerateASM(instructions []ir.Instruction) string {
 
 		case ir.Call:
 			emit(fmt.Sprintf("# %s", i.String()))
-			if i.Fun == "print_int" || i.Fun == "read_int" {
-				emit("subq $8, %rsp")
+			if i.Fun == "unary_-" || i.Fun == "Not" {
+				unaryPrint = true
+			}
+			if i.Fun == "print_int" || i.Fun == "read_int" || (i.Fun == "print_bool" && unaryPrint == false) {
+				if unaryPrint != true {
+					emit("subq $8, %rsp")
+				}
 				lines = append(lines, generateCall(i.Fun, i.Args, &locs)...)
 				emit(mov("%rax", locs.varToLocation[i.Dest]))
-				emit("add $8, %rsp\n")
-
+				if unaryPrint != true {
+					unaryPrint = false
+					emit("add $8, %rsp")
+				}
+				emit("\n")
 			} else {
 				lines = append(lines, generateCall(i.Fun, i.Args, &locs)...)
 				emit(mov("%rax", locs.varToLocation[i.Dest]))

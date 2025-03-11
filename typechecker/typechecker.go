@@ -10,9 +10,9 @@ type SymTab = utils.SymTab[utils.Type]
 
 func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 	switch n := node.(type) {
-	case *ast.Literal:
+	case ast.Literal:
 		var res utils.Type
-		_, ok := n.Value.(int)
+		_, ok := n.Value.(uint64)
 		if ok {
 			res = utils.Int{
 				Name: "Int",
@@ -24,13 +24,11 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		} else {
 			panic(fmt.Sprintf("Unknown literal type %s at location", n.Value))
 		}
-		n.Type = res
 		return res
 
-	case *ast.BinaryOp:
+	case ast.BinaryOp:
 		left := typecheck(n.Left, symTab)
 		right := typecheck(n.Right, symTab)
-		n.Type = left
 
 		switch n.Op {
 		case "+", "-", "*", "/", "%":
@@ -59,7 +57,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 			}
 			return left
 
-		case "!=", "==":
+		case "!=", "==", "and", "or":
 			if left != right {
 				panic(fmt.Sprintf("Both left %s and right %s must be same type", left, right))
 			}
@@ -68,7 +66,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 			}
 		}
 
-	case *ast.IfExpression:
+	case ast.IfExpression:
 		condition := typecheck(n.Condition, symTab)
 		_, ok := condition.(utils.Bool)
 		if !ok {
@@ -76,10 +74,9 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		}
 		then := typecheck(n.Then, symTab)
 		typecheck(n.Else, symTab)
-		n.Type = then
 		return then
 
-	case *ast.Declaration:
+	case ast.Declaration:
 		value := typecheck(n.Value, symTab)
 		var str string
 		if identifier, ok := n.Variable.(ast.Identifier); ok {
@@ -88,76 +85,84 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		if _, exists := symTab.Table[str]; exists {
 			panic(fmt.Sprintf("%s already declared", n.Variable))
 		}
+		if n.Typed.(ast.Identifier).Name == "Bool" {
+			if _, ok := value.(utils.Bool); !ok {
+				panic("Must be boolean")
+			}
+		} else if n.Typed.(ast.Identifier).Name == "Int" {
+			if _, ok := value.(utils.Int); !ok {
+				panic("Must be integer")
+			}
+		}
 		symTab.Table[str] = value
-		n.Type = value
 		return value
 
-	case *ast.Identifier:
+	case ast.Identifier:
 		if value, exists := symTab.Table[n.Name]; exists {
-			n.Type = value
 			return value
 		}
 		cur_scp := symTab.Parent
 		for cur_scp != nil {
 			if value, exists := cur_scp.Table[n.Name]; exists {
-				n.Type = value
 				return value
 			}
 			cur_scp = cur_scp.Parent
 		}
 
-	case *ast.Unary:
+	case ast.Unary:
 		value := typecheck(n.Exp, symTab)
-		n.Type = value
 		return value
 
-	case *ast.BooleanLiteral:
+	case ast.BooleanLiteral:
 		var res utils.Type
 		if n.Boolean == "true" || n.Boolean == "false" {
 			res = utils.Bool{
 				Name: "Bool",
 			}
 		}
-		n.Type = res
 		return res
 
-	case *ast.Function:
+	case ast.Function:
+
 		var params []utils.Type
 		for _, par := range n.Args {
 			params = append(params, typecheck(par, symTab))
 		}
+		if n.Name.(ast.Identifier).Name == "print_int" {
+			if _, ok := params[len(params)-1].(utils.Int); !ok {
+				panic("params should be int")
+			}
+		} else if n.Name.(ast.Identifier).Name == "print_bool" {
+			if _, ok := params[len(params)-1].(utils.Bool); !ok {
+				panic("params should be bool")
+			}
+		}
 		res := typecheck(n.Name, symTab)
-		n.Type = res
 		return utils.Fun{
 			Params: params,
 			Res:    res,
 		}
 
-	case *ast.Block:
+	case ast.Block:
 		var exprs []utils.Type
 		tab := utils.NewSymTab(symTab)
 		for _, expr := range n.Expressions {
 			exprs = append(exprs, typecheck(expr, tab))
 		}
 		res := typecheck(n.Result, tab)
-		n.Type = res
-		return utils.Fun{
-			Params: exprs,
-			Res:    res,
-		}
+		return res
 
-	case *ast.WhileLoop:
+	case ast.WhileLoop:
 		cond := typecheck(n.Condition, symTab)
 		if _, ok := cond.(utils.Bool); !ok {
 			panic(fmt.Sprintf("%s condition is not boolean", cond))
 		}
-		n.Type = cond
 		return typecheck(n.Looping, symTab)
 
-	case *ast.FunctionTypeExpression:
+	case ast.FunctionTypeExpression:
 		return nil
 	}
-	return nil
+	return utils.Unit{}
 }
 
 func Type(nodes ast.Expression) any {

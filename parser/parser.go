@@ -16,7 +16,8 @@ type Parser struct {
 var precedenceLevels = [][]string{
 	{"or"},
 	{"and"},
-	{"==", "!=", "<", "<=", ">", ">="},
+	{"==", "!="},
+	{"<", "<=", ">", ">="},
 	{"+", "-"},
 	{"*", "/", "%"},
 }
@@ -135,10 +136,10 @@ func (p *Parser) parseIdentifier() ast.Identifier {
 	}
 }
 
-func (p *Parser) parseParenthesised(list []string, allow bool) ast.Expression {
+func (p *Parser) parseParenthesised() ast.Expression {
 	p.consume("(")
 	var expr ast.Expression
-	expr = p.parseExpression(append([]string{")"}, list...), allow)
+	expr = p.parseExpression()
 	if p.peek().Text != ")" {
 		panic(fmt.Sprintf("Token should be left paren ), but is %s", p.peek().Text))
 	}
@@ -146,16 +147,16 @@ func (p *Parser) parseParenthesised(list []string, allow bool) ast.Expression {
 	return expr
 }
 
-func (p *Parser) parseIfExpression(list []string, allow bool) ast.Expression {
+func (p *Parser) parseIfExpression() ast.Expression {
 	loc := p.peek().Location
 	p.consume("if")
-	condition := p.parseExpression(list, allow)
+	condition := p.parseExpression()
 	p.consume("then")
-	thenExpr := p.parseExpression(list, allow)
+	thenExpr := p.parseExpression()
 	var elseExpr ast.Expression
 	if p.peek().Text == "else" {
 		p.consume("else")
-		elseExpr = p.parseExpression(list, allow)
+		elseExpr = p.parseExpression()
 	}
 	return ast.IfExpression{
 		Location:  loc,
@@ -175,13 +176,13 @@ func (p *Parser) parseBooleanLiteral() ast.BooleanLiteral {
 	}
 }
 
-func (p *Parser) parseUnary(list []string, allow bool) ast.Expression {
+func (p *Parser) parseUnary() ast.Expression {
 	var operator string
 	if p.peek().Text == "not" || p.peek().Text == "-" {
 		operator = p.peek().Text
 		p.consume(nil)
 	}
-	factor := p.parseFactor(list, allow)
+	factor := p.parseFactor()
 	if operator != "" {
 		factor = ast.Unary{
 			Op:       operator,
@@ -196,9 +197,9 @@ func (p *Parser) parseUnary(list []string, allow bool) ast.Expression {
 func (p *Parser) parseWhileLoop() ast.Expression {
 	loc := p.peek().Location
 	p.consume("while")
-	condition := p.parseExpression([]string{"do"}, false)
+	condition := p.parseExpression()
 	p.consume("do")
-	looping := p.parseExpression([]string{}, false)
+	looping := p.parseExpression()
 	return ast.WhileLoop{
 		Location:  loc,
 		Condition: condition,
@@ -207,21 +208,21 @@ func (p *Parser) parseWhileLoop() ast.Expression {
 	}
 }
 
-func (p *Parser) parseTermPrecedence(precedence int, list []string, allow bool) ast.Expression {
+func (p *Parser) parseTermPrecedence(precedence int) ast.Expression {
 	var left ast.Expression
 	if precedence == len(precedenceLevels)-1 {
-		left = p.parseUnary(list, allow)
+		left = p.parseUnary()
 	} else {
-		left = p.parseTermPrecedence(precedence+1, list, allow)
+		left = p.parseTermPrecedence(precedence + 1)
 	}
 	for contains(precedenceLevels[precedence], p.peek().Text) {
 		operatorToken := p.consume(nil)
 		operator := operatorToken.Text
 		var right ast.Expression
 		if precedence == len(precedenceLevels)-1 {
-			right = p.parseUnary(list, allow)
+			right = p.parseUnary()
 		} else {
-			right = p.parseTermPrecedence(precedence+1, list, allow)
+			right = p.parseTermPrecedence(precedence + 1)
 		}
 		left = ast.BinaryOp{
 			Location: left.GetLocation(),
@@ -234,19 +235,19 @@ func (p *Parser) parseTermPrecedence(precedence int, list []string, allow bool) 
 	return left
 }
 
-func (p *Parser) parseFactor(list []string, allow bool) ast.Expression {
+func (p *Parser) parseFactor() ast.Expression {
 	token := p.peek()
 	var res ast.Expression
 	if token.Type == "Punctuation" {
 		if token.Text == "{" {
 			res = p.parseBlock()
 		} else if token.Text == "(" {
-			res = p.parseParenthesised(list, allow)
+			res = p.parseParenthesised()
 		} else {
 			panic(fmt.Sprintf("Unexpected token %v, expexted left brace", p.peek().Text))
 		}
 	} else if token.Text == "if" {
-		res = p.parseIfExpression(list, allow)
+		res = p.parseIfExpression()
 	} else if token.Text == "var" {
 		res = nil
 	} else if token.Text == "true" || token.Text == "false" {
@@ -269,21 +270,21 @@ func (p *Parser) parseFactor(list []string, allow bool) ast.Expression {
 		panic("Invalid end of code")
 	}
 	if p.peek().Text == "(" {
-		res = p.parseFunction(list, allow, res)
+		res = p.parseFunction(res)
 	}
 	return res
 }
 
-func (p *Parser) parseFunction(list []string, allow bool, callee ast.Expression) ast.Expression {
+func (p *Parser) parseFunction(callee ast.Expression) ast.Expression {
 	var args []ast.Expression
 	loc := p.peek().Location
 	p.consume("(")
 	if p.peek().Text != ")" {
-		exprs := p.parseExpression(append([]string{",", ")"}, list...), allow)
+		exprs := p.parseExpression()
 		args = append(args, exprs)
 		for p.peek().Text == "," {
 			p.consume(",")
-			exprs = p.parseExpression(append([]string{",", ")"}, list...), allow)
+			exprs = p.parseExpression()
 			args = append(args, exprs)
 		}
 	}
@@ -296,13 +297,13 @@ func (p *Parser) parseFunction(list []string, allow bool, callee ast.Expression)
 	}
 }
 
-func (p *Parser) parseExpression(list []string, allow bool) ast.Expression {
+func (p *Parser) parseExpression() ast.Expression {
 	precedence := 0
-	left := p.parseTermPrecedence(precedence+1, list, allow)
+	left := p.parseTermPrecedence(precedence + 1)
 	for contains(precedenceLevels[precedence], p.peek().Text) {
 		operatorToken := p.consume(nil)
 		operator := operatorToken.Text
-		right := p.parseTermPrecedence(precedence+1, list, allow)
+		right := p.parseTermPrecedence(precedence + 1)
 		left = ast.BinaryOp{
 			Location: left.GetLocation(),
 			Right:    right,
@@ -314,7 +315,7 @@ func (p *Parser) parseExpression(list []string, allow bool) ast.Expression {
 	if p.peek().Text == "=" {
 		operatorToken := p.consume(nil)
 		operator := operatorToken.Text
-		right := p.parseExpression(list, allow)
+		right := p.parseExpression()
 		left = ast.BinaryOp{
 			Location: left.GetLocation(),
 			Right:    right,
@@ -353,18 +354,18 @@ func (p *Parser) parseTypeExpression() ast.Expression {
 	}
 }
 
-func (p *Parser) parseTopExpression(list []string, allow bool) ast.Expression {
+func (p *Parser) parseTopExpression() ast.Expression {
 	if p.peek().Text == "var" {
 		p.consume("var")
 		decl := p.parseIdentifier()
-		var typed ast.Expression
+		var typed ast.Identifier
 		if p.peek().Text == ":" {
 			p.consume(":")
-			typed = p.parseTypeExpression()
+			typed = p.parseIdentifier()
 		}
 
 		p.consume("=")
-		declVal := p.parseExpression(list, allow)
+		declVal := p.parseExpression()
 		return ast.Declaration{
 			Location: decl.GetLocation(),
 			Variable: decl,
@@ -373,7 +374,7 @@ func (p *Parser) parseTopExpression(list []string, allow bool) ast.Expression {
 			Type:     utils.Unit{},
 		}
 	}
-	return p.parseExpression(list, allow)
+	return p.parseExpression()
 }
 
 func (p *Parser) parseBlock() ast.Expression {
@@ -395,18 +396,40 @@ func (p *Parser) parseBlock() ast.Expression {
 				Type: utils.Unit{},
 			}
 		}
-		// Parse a expression
-		expression := p.parseTopExpression([]string{";", "}"}, true)
 
-		// If next is '}' now, return block with 'expression' as result
-		if p.peek().Text == "}" || p.peek().Type == "end" {
-			p.consume("}")
+		// Parse a expression
+		expression := p.parseTopExpression()
+		_, ok := expression.(ast.Declaration)
+
+		if p.peek().Type == "end" && ok {
 			return ast.Block{
+				Location:    loc,
+				Expressions: []ast.Expression{expression},
+				Result:      nil,
+				Type:        utils.Unit{},
+			}
+			// If next is '}' now, return block with 'expression' as result
+		} else if p.peek().Text == "}" || p.peek().Type == "end" {
+			p.consume("}")
+			left := ast.Block{
 				Location:    loc,
 				Expressions: expressions,
 				Result:      expression,
 				Type:        utils.Unit{},
 			}
+			if contains([]string{"+", "-", "*", "/", "%"}, p.peek().Text) {
+				op := p.consume(nil)
+				right := p.parseTopExpression()
+				res := ast.BinaryOp{
+					Location: loc,
+					Left:     left,
+					Op:       op.Text,
+					Right:    right,
+					Type:     utils.Unit{},
+				}
+				return res
+			}
+			return left
 		}
 
 		// Otherwise add expression and consume ';' if present

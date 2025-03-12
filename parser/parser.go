@@ -138,8 +138,7 @@ func (p *Parser) parseIdentifier() ast.Identifier {
 
 func (p *Parser) parseParenthesised() ast.Expression {
 	p.consume("(")
-	var expr ast.Expression
-	expr = p.parseExpression()
+	expr := p.parseExpression()
 	if p.peek().Text != ")" {
 		panic(fmt.Sprintf("Token should be left paren ), but is %s", p.peek().Text))
 	}
@@ -178,11 +177,14 @@ func (p *Parser) parseBooleanLiteral() ast.BooleanLiteral {
 
 func (p *Parser) parseUnary() ast.Expression {
 	var operator string
+	var factor ast.Expression
 	if p.peek().Text == "not" || p.peek().Text == "-" {
 		operator = p.peek().Text
 		p.consume(nil)
+		factor = p.parseUnary()
+	} else {
+		factor = p.parseFactor()
 	}
-	factor := p.parseFactor()
 	if operator != "" {
 		factor = ast.Unary{
 			Op:       operator,
@@ -330,30 +332,6 @@ func (p *Parser) parseExpression() ast.Expression {
 	return left
 }
 
-func (p *Parser) parseTypeExpression() ast.Expression {
-	if p.peek().Text == "(" {
-		p.consume("(")
-		var params []ast.Expression
-		param := p.parseTypeExpression()
-		params = append(params, param)
-		for p.peek().Text == "," {
-			param = p.parseTypeExpression()
-			params = append(params, param)
-		}
-		p.consume(")")
-		p.consume("=>")
-		res := p.parseTypeExpression()
-		return ast.FunctionTypeExpression{
-			Location:      p.peek().Location,
-			VariableTypes: params,
-			ResultType:    res,
-			Type:          utils.Unit{},
-		}
-	} else {
-		return p.parseIdentifier()
-	}
-}
-
 func (p *Parser) parseTopExpression() ast.Expression {
 	if p.peek().Text == "var" {
 		p.consume("var")
@@ -397,7 +375,6 @@ func (p *Parser) parseBlock() ast.Expression {
 			}
 		}
 
-		// Parse a expression
 		expression := p.parseTopExpression()
 		_, ok := expression.(ast.Declaration)
 
@@ -408,7 +385,6 @@ func (p *Parser) parseBlock() ast.Expression {
 				Result:      nil,
 				Type:        utils.Unit{},
 			}
-			// If next is '}' now, return block with 'expression' as result
 		} else if p.peek().Text == "}" || p.peek().Type == "end" {
 			p.consume("}")
 			left := ast.Block{
@@ -431,8 +407,6 @@ func (p *Parser) parseBlock() ast.Expression {
 			}
 			return left
 		}
-
-		// Otherwise add expression and consume ';' if present
 		expressions = append(expressions, expression)
 		if p.peek().Text == ";" {
 			p.consume(";")

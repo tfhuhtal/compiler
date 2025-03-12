@@ -28,7 +28,6 @@ func NewIRGenerator(rootTypes map[IRVar]Type) *IRGenerator {
 		gen.varTypes[k] = v
 	}
 	gen.varTypes["unit"] = utils.Unit{}
-	gen.instructions = append(gen.instructions, gen.newLabel())
 	return gen
 }
 

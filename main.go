@@ -30,11 +30,12 @@ func callCompiler(sourceCode string, file string) []byte {
 	}()
 
 	tokens := tokenizer.Tokenize(sourceCode, file)
+
 	p := parser.New(tokens)
 	res := p.Parse()
-	typechecker.Type(res)
+	fmt.Println(res)
 
-	//fmt.Println(res)
+	typechecker.Type(res)
 
 	rootTypes := map[irgenerator.IRVar]utils.Type{
 		"+":   utils.Int{},
@@ -55,15 +56,15 @@ func callCompiler(sourceCode string, file string) []byte {
 	gen := irgenerator.NewIRGenerator(rootTypes)
 	instructions := gen.Generate(res)
 
-	/*for _, i := range instructions {*/
-	/*fmt.Println(i)*/
-	/*}*/
+	for _, i := range instructions {
+		fmt.Println(i)
+	}
 
-	asmgenerator.GenerateASM(instructions)
+	asm := asmgenerator.GenerateASM(instructions)
 
-	/*fmt.Println(asm)*/
+	fmt.Println(asm)
 
-	output, _ = assembler.Assemble("", "")
+	output, _ = assembler.Assemble(asm, "")
 	return output
 }
 
@@ -95,7 +96,7 @@ func handleConnection(conn net.Conn) {
 			conn.Write(resp)
 			return
 		} else {
-			result["program"] = base64.StdEncoding.EncodeToString(executable)
+			result["error"] = base64.StdEncoding.EncodeToString(executable)
 		}
 	case "ping":
 	default:
@@ -178,7 +179,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		asm := callCompiler("var n: Int = read_int();print_int(n);while n > 1 do {if n % 2 == 0 then {n = n / 2;} else {n = 3*n + 1;}print_int(n);}", inputFile)
+		asm := callCompiler("while true do { x = x + 1; }", inputFile)
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)

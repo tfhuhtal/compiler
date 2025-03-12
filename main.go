@@ -33,7 +33,7 @@ func callCompiler(sourceCode string, file string) []byte {
 
 	p := parser.New(tokens)
 	res := p.Parse()
-	/*fmt.Println(res)*/
+	fmt.Println(res)
 
 	typechecker.Type(res)
 
@@ -56,13 +56,13 @@ func callCompiler(sourceCode string, file string) []byte {
 	gen := irgenerator.NewIRGenerator(rootTypes)
 	instructions := gen.Generate(res)
 
-	for _, i := range instructions {
-		fmt.Println(i)
-	}
+	/* for _, i := range instructions {*/
+	/*fmt.Println(i)*/
+	/*}*/
 
 	asm := asmgenerator.GenerateASM(instructions)
 
-	fmt.Println(asm)
+	/* fmt.Println(asm)*/
 
 	output, _ = assembler.Assemble(asm, "")
 	return output
@@ -132,6 +132,7 @@ func runServer(host string, port int) {
 func main() {
 	var command string
 	var inputFile string
+	var input string
 	var outputFile string
 	var host string = "127.0.0.1"
 	var port int = 3000
@@ -144,6 +145,13 @@ func main() {
 			if len(matches) > 1 {
 				outputFile = matches[1]
 			}
+		} else if matched, _ := regexp.MatchString(`^--input=(.+)`, arg); matched {
+			re := regexp.MustCompile(`^--input=(.+)`)
+			matches := re.FindStringSubmatch(arg)
+			if len(matches) > 1 {
+				input = matches[1]
+			}
+
 		} else if matched, _ := regexp.MatchString(`^--host=(.+)`, arg); matched {
 			re := regexp.MustCompile(`^--host=(.+)`)
 			matches := re.FindStringSubmatch(arg)
@@ -179,7 +187,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		asm := callCompiler("false or not not true", inputFile)
+		asm := callCompiler(input, inputFile)
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)

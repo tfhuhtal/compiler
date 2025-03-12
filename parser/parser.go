@@ -360,11 +360,12 @@ func (p *Parser) parseBlock() ast.Expression {
 	p.consume("{")
 	loc := p.peek().Location
 	var expressions []ast.Expression
+	var left ast.Expression
 	for {
 		if p.peek().Text == "}" || p.peek().Type == "end" {
 			endLoc := p.peek().Location
-			p.consume("}")
-			return ast.Block{
+			p.consume(nil)
+			left = ast.Block{
 				Location:    loc,
 				Expressions: expressions,
 				Result: ast.Literal{
@@ -374,21 +375,29 @@ func (p *Parser) parseBlock() ast.Expression {
 				},
 				Type: utils.Unit{},
 			}
+			break
 		}
 
 		expression := p.parseTopExpression()
+		if _, ok := expression.(ast.Literal); ok {
+			if p.peek().Text == "{" {
+				panic("Not allowed")
+			}
+		}
 		_, ok := expression.(ast.Declaration)
 
 		if p.peek().Type == "end" && ok {
-			return ast.Block{
+			left = ast.Block{
 				Location:    loc,
 				Expressions: []ast.Expression{expression},
 				Result:      nil,
 				Type:        utils.Unit{},
 			}
+			break
 		} else if p.peek().Text == "}" || p.peek().Type == "end" {
-			p.consume("}")
-			left := ast.Block{
+			p.consume(nil)
+			fmt.Println("here")
+			left = ast.Block{
 				Location:    loc,
 				Expressions: expressions,
 				Result:      expression,
@@ -404,15 +413,17 @@ func (p *Parser) parseBlock() ast.Expression {
 					Right:    right,
 					Type:     utils.Unit{},
 				}
-				return res
+				left = res
+
 			}
-			return left
+			break
 		}
 		expressions = append(expressions, expression)
 		if p.peek().Text == ";" {
 			p.consume(";")
 		}
 	}
+	return left
 }
 
 func (p *Parser) Parse() ast.Expression {

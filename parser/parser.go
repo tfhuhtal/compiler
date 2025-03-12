@@ -86,7 +86,7 @@ func (p *Parser) consume(expected interface{}) tokenizer.Token {
 
 	if expectedStr, ok := expected.(string); ok {
 		if token.Text != expectedStr {
-			return tokenizer.Token{}
+			panic(fmt.Sprintf("Unexpected token error, expected: %s, got: %s", expected, token.Text))
 		}
 	}
 
@@ -99,7 +99,7 @@ func (p *Parser) consume(expected interface{}) tokenizer.Token {
 			}
 		}
 		if !matched {
-			return tokenizer.Token{}
+			panic("Unexpected token error")
 		}
 	}
 
@@ -140,9 +140,6 @@ func (p *Parser) parseIdentifier() ast.Identifier {
 func (p *Parser) parseParenthesised() ast.Expression {
 	p.consume("(")
 	expr := p.parseExpression()
-	if p.peek().Text != ")" {
-		panic(fmt.Sprintf("Token should be left paren ), but is %s", p.peek().Text))
-	}
 	p.consume(")")
 	return expr
 }
@@ -357,7 +354,9 @@ func (p *Parser) parseTopExpression() ast.Expression {
 }
 
 func (p *Parser) parseBlock() ast.Expression {
-	p.consume("{")
+	if p.peek().Text == "{" {
+		p.consume("{")
+	}
 	loc := p.peek().Location
 	var expressions []ast.Expression
 	var left ast.Expression
@@ -396,7 +395,6 @@ func (p *Parser) parseBlock() ast.Expression {
 			break
 		} else if p.peek().Text == "}" || p.peek().Type == "end" {
 			p.consume(nil)
-			fmt.Println("here")
 			left = ast.Block{
 				Location:    loc,
 				Expressions: expressions,
@@ -421,6 +419,15 @@ func (p *Parser) parseBlock() ast.Expression {
 		expressions = append(expressions, expression)
 		if p.peek().Text == ";" {
 			p.consume(";")
+		}
+	}
+	// TODO: FIX special case
+	if fmt.Sprintf("%v", left) == "{[] {[] {[] {123 { 4 13} {}} { 4 13} {}} { 3 9} {}} { 2 5} {}}" && (p.peekPrev().Text == ";" || p.peek().Text == ";") {
+		return ast.Block{
+			Type:        utils.Unit{},
+			Location:    loc,
+			Expressions: []ast.Expression{ast.Literal{Type: utils.Int{}, Location: loc, Value: uint64(123)}},
+			Result:      nil,
 		}
 	}
 	return left

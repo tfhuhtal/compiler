@@ -33,7 +33,7 @@ func callCompiler(sourceCode string, file string) []byte {
 
 	p := parser.New(tokens)
 	res := p.Parse()
-	fmt.Println(res)
+	/* fmt.Println(res)*/
 
 	typechecker.Type(res)
 
@@ -62,7 +62,7 @@ func callCompiler(sourceCode string, file string) []byte {
 
 	asm := asmgenerator.GenerateASM(instructions)
 
-	/* fmt.Println(asm)*/
+	//fmt.Println(asm)
 
 	output, _ = assembler.Assemble(asm, "")
 	return output

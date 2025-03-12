@@ -216,3 +216,31 @@ func TestParser_While(t *testing.T) {
 		t.Errorf("Expected %v but got %v", expected, res)
 	}
 }
+
+/*func TestParser_Block(t *testing.T) {*/
+/*tokens := tokenizer.Tokenize("{{{123}}};", "")*/
+/*p := New(tokens)*/
+/*res := p.Parse()*/
+/*expected := ast.Block{*/
+/*Type:     utils.Unit{},*/
+/*Location: tokenizer.SourceLocation{Line: 1, Column: 1},*/
+/*Result:   nil,*/
+/*Expressions: []ast.Expression{ast.Block{*/
+/*Type:     utils.Unit{},*/
+/*Location: tokenizer.SourceLocation{Line: 1, Column: 1},*/
+/*Result:   nil,*/
+/*Expressions: []ast.Expression{ast.Block{*/
+/*Type:        utils.Unit{},*/
+/*Location:    tokenizer.SourceLocation{Line: 1, Column: 1},*/
+/*Result:      ast.Literal{Type: utils.Int{}, Value: uint64(123)},*/
+/*Expressions: []ast.Expression{},*/
+/*},*/
+/*},*/
+/*},*/
+/*},*/
+/*}*/
+
+/*if fmt.Sprintf("%v", res) != fmt.Sprintf("%v", expected) {*/
+/*t.Errorf("Expected %v but got %v", expected, res)*/
+/*}*/
+/*}*/

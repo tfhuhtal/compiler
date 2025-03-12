@@ -127,16 +127,16 @@ func GenerateASM(instructions []ir.Instruction) string {
 
 		case ir.Call:
 			emit(fmt.Sprintf("# %s", i.String()))
-			if i.Fun == "unary_-" || i.Fun == "Not" {
-				unaryPrint = true
+			if i.Fun == "unary_-" || i.Fun == "unary_not" {
+				unaryPrint = !unaryPrint
 			}
-			if i.Fun == "print_int" || i.Fun == "read_int" || (i.Fun == "print_bool" && unaryPrint == false) {
-				if unaryPrint != true {
+			if i.Fun == "print_int" || i.Fun == "read_int" || i.Fun == "print_bool" {
+				if unaryPrint {
 					emit("subq $8, %rsp")
 				}
 				lines = append(lines, generateCall(i.Fun, i.Args, &locs)...)
 				emit(mov("%rax", locs.varToLocation[i.Dest]))
-				if unaryPrint != true {
+				if unaryPrint {
 					unaryPrint = false
 					emit("add $8, %rsp")
 				}
@@ -298,7 +298,7 @@ func operatorFromStr(op string, argCount int) (Symbol, bool) {
 		switch op {
 		case "unary_-":
 			return Symbol{op: UnarySub}, true
-		case "not":
+		case "unary_not":
 			return Symbol{op: Not}, true
 		}
 	}

@@ -81,4 +81,27 @@ func TestTypecheck(t *testing.T) {
 		}()
 		Type(res)
 	})
+	t.Run("Allowed unary", func(t *testing.T) {
+		tokens := tokenizer.Tokenize("not (1*2)", "")
+		p := parser.New(tokens)
+		res := p.Parse()
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Expected panic, got nil")
+			}
+		}()
+		Type(res)
+	})
+	t.Run("Not allowed not", func(t *testing.T) {
+		tokens := tokenizer.Tokenize("-(1*2)", "")
+		p := parser.New(tokens)
+		res := p.Parse()
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Expected panic, got nil")
+			}
+		}()
+		Type(res)
+	})
+
 }

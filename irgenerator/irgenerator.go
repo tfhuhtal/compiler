@@ -117,10 +117,14 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		panic("Unsupported boolean literal")
 
 	case ast.Identifier:
-		if _, exists := st.Table[e.Name]; !exists {
+		value, exists := st.Table[e.Name]
+
+		if st.Parent != nil && !exists {
+			return g.visit(st.Parent, e)
+		} else if !exists {
 			panic(fmt.Sprintf("Undefined variable: %s, in location %v", e.Name, e.GetLocation()))
 		}
-		return st.Table[e.Name]
+		return value
 
 	case ast.BinaryOp:
 		left := g.visit(st, e.Left)

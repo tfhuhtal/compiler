@@ -114,6 +114,9 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 
 	case ast.Unary:
 		value := typecheck(n.Exp, symTab)
+		if _, ok := value.(utils.Bool); !ok && n.Op == "not" {
+			panic(fmt.Sprintf("Not allowed Unary %v", value))
+		}
 		return value
 
 	case ast.BooleanLiteral:

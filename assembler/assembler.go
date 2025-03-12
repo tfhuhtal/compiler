@@ -137,12 +137,10 @@ print_bool:
 	ret
 
 true_str:
-	.ascii "true
-"
+	.ascii "true\n"
 true_str_len = . - true_str
 false_str:
-	.ascii "false
-"
+	.ascii "false\n"
 false_str_len = . - false_str
 
 # ***** Function 'read_int' *****

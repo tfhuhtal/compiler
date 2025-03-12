@@ -20,7 +20,7 @@ import (
 )
 
 func callCompiler(sourceCode string, file string) []byte {
-	fmt.Println(sourceCode, "================")
+	fmt.Println(sourceCode)
 	var output []byte
 	defer func() {
 		if r := recover(); r != nil {
@@ -33,7 +33,7 @@ func callCompiler(sourceCode string, file string) []byte {
 
 	p := parser.New(tokens)
 	res := p.Parse()
-	fmt.Println(res)
+	/*fmt.Println(res)*/
 
 	typechecker.Type(res)
 
@@ -179,7 +179,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		asm := callCompiler("-1 + -2", inputFile)
+		asm := callCompiler("false or not not true", inputFile)
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)
@@ -187,3 +187,14 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Error: Unknown command")
 	}
 }
+
+// { { 1 }; 2 { 3 } }
+//
+//
+//{
+//    {
+//        {
+//            123
+//        }
+//    }
+//};

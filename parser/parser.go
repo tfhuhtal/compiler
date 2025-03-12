@@ -152,6 +152,7 @@ func (p *Parser) parseIfExpression() ast.Expression {
 	condition := p.parseExpression()
 	p.consume("then")
 	thenExpr := p.parseExpression()
+	fmt.Println("here", thenExpr)
 	var elseExpr ast.Expression
 	if p.peek().Text == "else" {
 		p.consume("else")

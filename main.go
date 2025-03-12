@@ -20,7 +20,7 @@ import (
 )
 
 func callCompiler(sourceCode string, file string) []byte {
-	fmt.Println(sourceCode)
+	fmt.Println(sourceCode, "================")
 	var output []byte
 	defer func() {
 		if r := recover(); r != nil {
@@ -96,7 +96,7 @@ func handleConnection(conn net.Conn) {
 			conn.Write(resp)
 			return
 		} else {
-			result["error"] = base64.StdEncoding.EncodeToString(executable)
+			result["program"] = base64.StdEncoding.EncodeToString(executable)
 		}
 	case "ping":
 	default:
@@ -179,7 +179,7 @@ func main() {
 	}
 
 	if command == "compile" {
-		asm := callCompiler("while true do { x = x + 1; }", inputFile)
+		asm := callCompiler("-1 + -2", inputFile)
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)

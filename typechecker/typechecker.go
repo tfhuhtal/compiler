@@ -72,6 +72,9 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		if !ok {
 			panic(fmt.Sprintf("%s condition is not boolean", condition))
 		}
+		if n.Then == nil {
+			panic(fmt.Sprintf("Not allowed to declare here %v", n.Then))
+		}
 		then := typecheck(n.Then, symTab)
 		typecheck(n.Else, symTab)
 		return then
@@ -161,8 +164,6 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		}
 		return typecheck(n.Looping, symTab)
 
-	case ast.FunctionTypeExpression:
-		return nil
 	}
 	return utils.Unit{}
 }

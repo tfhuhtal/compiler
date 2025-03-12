@@ -69,4 +69,16 @@ func TestTypecheck(t *testing.T) {
 		}()
 		Type(res)
 	})
+	t.Run("Wrong declaration", func(t *testing.T) {
+		tokens := tokenizer.Tokenize("if true then var x = 3;", "")
+		p := parser.New(tokens)
+		res := p.Parse()
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Expected panic, got nil")
+
+			}
+		}()
+		Type(res)
+	})
 }

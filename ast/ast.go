@@ -2,7 +2,6 @@ package ast
 
 import (
 	"compiler/tokenizer"
-	"compiler/utils"
 )
 
 type Location = tokenizer.SourceLocation
@@ -15,7 +14,6 @@ type Expression interface {
 type Literal struct {
 	Value    any
 	Location Location
-	Type     utils.Type
 }
 
 func (Literal) isExpression() {}
@@ -26,7 +24,6 @@ func (l Literal) GetLocation() Location {
 type Identifier struct {
 	Name     string
 	Location Location
-	Type     utils.Type
 }
 
 func (Identifier) isExpression() {}
@@ -39,7 +36,6 @@ type BinaryOp struct {
 	Op       string
 	Right    Expression
 	Location Location
-	Type     utils.Type
 }
 
 func (BinaryOp) isExpression() {}
@@ -52,7 +48,6 @@ type IfExpression struct {
 	Then      Expression
 	Else      Expression
 	Location  Location
-	Type      utils.Type
 }
 
 func (IfExpression) isExpression() {}
@@ -64,7 +59,6 @@ type Function struct {
 	Name     Expression
 	Args     []Expression
 	Location Location
-	Type     utils.Type
 }
 
 func (Function) isExpression() {}
@@ -75,7 +69,6 @@ func (f Function) GetLocation() Location {
 type BooleanLiteral struct {
 	Boolean  string
 	Location Location
-	Type     utils.Type
 }
 
 func (BooleanLiteral) isExpression() {}
@@ -87,7 +80,6 @@ type Unary struct {
 	Op       string
 	Exp      Expression
 	Location Location
-	Type     utils.Type
 }
 
 func (Unary) isExpression() {}
@@ -99,7 +91,6 @@ type Block struct {
 	Expressions []Expression
 	Result      Expression
 	Location    Location
-	Type        utils.Type
 }
 
 func (Block) isExpression() {}
@@ -111,7 +102,6 @@ type FunctionTypeExpression struct {
 	VariableTypes []Expression
 	ResultType    Expression
 	Location      Location
-	Type          utils.Type
 }
 
 func (FunctionTypeExpression) isExpression() {}
@@ -124,7 +114,6 @@ type Declaration struct {
 	Value    Expression
 	Typed    Expression
 	Location Location
-	Type     utils.Type
 }
 
 func (Declaration) isExpression() {}
@@ -136,7 +125,6 @@ type WhileLoop struct {
 	Condition Expression
 	Looping   Expression
 	Location  Location
-	Type      utils.Type
 }
 
 func (WhileLoop) isExpression() {}

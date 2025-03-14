@@ -1,9 +1,7 @@
 package parser
 
 import (
-	"compiler/ast"
 	"compiler/tokenizer"
-	"compiler/utils"
 	"fmt"
 	"testing"
 )
@@ -32,27 +30,8 @@ func TestParser_BinaryOp(t *testing.T) {
 func TestParser_Unary(t *testing.T) {
 	tokens := tokenizer.Tokenize("not not false", "")
 	res := Parse(tokens)
-	expected := ast.Block{
-		Location:    tokenizer.SourceLocation{Line: 1, Column: 1},
-		Type:        utils.Unit{},
-		Expressions: []ast.Expression{},
-		Result: ast.Unary{
-			Type:     utils.Unit{},
-			Location: tokenizer.SourceLocation{Line: 1, Column: 9},
-			Op:       "not",
-			Exp: ast.Unary{
-				Type:     utils.Unit{},
-				Location: tokenizer.SourceLocation{Line: 1, Column: 9},
-				Op:       "not",
-				Exp: ast.BooleanLiteral{
-					Boolean:  "false",
-					Location: tokenizer.SourceLocation{Line: 1, Column: 9},
-					Type:     utils.Unit{},
-				},
-			},
-		},
-	}
-	if res.(ast.Block).Result != expected.Result {
+	expected := "{[] {not {not {false { 1 9}} { 1 9}} { 1 9}} { 1 9}}"
+	if fmt.Sprintf("%v", res) != expected {
 		t.Errorf("Expected %v but got %v", expected, res)
 	}
 }
@@ -60,7 +39,7 @@ func TestParser_Unary(t *testing.T) {
 func TestParser_If(t *testing.T) {
 	tokens := tokenizer.Tokenize("1 + if 1 < 2 then 10 else 100", "")
 	res := Parse(tokens)
-	expected := "{[] {{1 { 1 1} {}} + {{{1 { 1 8} {}} < {2 { 1 12} {}} { 1 8} {}} {10 { 1 19} {}} {100 { 1 27} {}} { 1 5} {}} { 1 1} {}} { 1 27} {}}"
+	expected := "{[] {{1 { 1 1}} + {{{1 { 1 8}} < {2 { 1 12}} { 1 8}} {10 { 1 19}} {100 { 1 27}} { 1 5}} { 1 1}} { 1 27}}"
 	if fmt.Sprintf("%v", res) != expected {
 		t.Errorf("Expected %v but got %v", expected, res)
 	}
@@ -113,7 +92,7 @@ func TestParser_Blocks(t *testing.T) {
 func TestParser_While(t *testing.T) {
 	tokens := tokenizer.Tokenize("while true do { x = x + 1; }", "")
 	res := Parse(tokens)
-	expected := "{[] {{true { 1 7} {}} {[{{x { 1 17} {}} = {{x { 1 21} {}} + {1 { 1 25} {}} { 1 21} {}} { 1 17} {}}] <nil> { 1 28} {}} { 1 1} {}} { 1 28} {}}"
+	expected := "{[] {{true { 1 7}} {[{{x { 1 17}} = {{x { 1 21}} + {1 { 1 25}} { 1 21}} { 1 17}}] <nil> { 1 28}} { 1 1}} { 1 28}}"
 	if fmt.Sprintf("%v", res) != fmt.Sprintf("%v", expected) {
 		t.Errorf("Expected %v but got %v", expected, res)
 	}
@@ -122,7 +101,7 @@ func TestParser_While(t *testing.T) {
 func TestParser_Block1(t *testing.T) {
 	tokens := tokenizer.Tokenize("{123};", "")
 	res := Parse(tokens)
-	expected := "{[{[] {123 { 1 2} {}} { 1 5} {}}] <nil> { 1 6} {}}"
+	expected := "{[{[] {123 { 1 2}} { 1 5}}] <nil> { 1 6}}"
 	if fmt.Sprintf("%v", res) != expected {
 		t.Errorf("Expected %v but got %v", expected, res)
 	}
@@ -131,7 +110,7 @@ func TestParser_Block1(t *testing.T) {
 func TestParser_Block2(t *testing.T) {
 	tokens := tokenizer.Tokenize("{123}", "")
 	res := Parse(tokens)
-	expected := "{[] {[] {123 { 1 2} {}} { 1 5} {}} { 1 5} {}}"
+	expected := "{[] {[] {123 { 1 2}} { 1 5}} { 1 5}}"
 
 	if fmt.Sprintf("%v", res) != fmt.Sprintf("%v", expected) {
 		t.Errorf("Expected %v but got %v", expected, res)

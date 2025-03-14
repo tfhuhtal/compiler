@@ -3,7 +3,6 @@ package parser
 import (
 	"compiler/ast"
 	"compiler/tokenizer"
-	"compiler/utils"
 	"fmt"
 	"strconv"
 )
@@ -81,19 +80,6 @@ func (p *Parser) consume(expected interface{}) tokenizer.Token {
 		}
 	}
 
-	if expectedList, ok := expected.([]string); ok {
-		matched := false
-		for _, e := range expectedList {
-			if token.Text == e {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			panic("Unexpected token error")
-		}
-	}
-
 	p.pos++
 	return token
 }
@@ -111,7 +97,6 @@ func (p *Parser) parseIntLiteral() ast.Literal {
 	return ast.Literal{
 		Location: consumedToken.Location,
 		Value:    value,
-		Type:     utils.Unit{},
 	}
 }
 
@@ -124,7 +109,6 @@ func (p *Parser) parseIdentifier() ast.Identifier {
 	return ast.Identifier{
 		Location: consumedToken.Location,
 		Name:     consumedToken.Text,
-		Type:     utils.Unit{},
 	}
 }
 
@@ -151,7 +135,6 @@ func (p *Parser) parseIfExpression() ast.Expression {
 		Condition: condition,
 		Then:      thenExpr,
 		Else:      elseExpr,
-		Type:      utils.Unit{},
 	}
 }
 
@@ -160,7 +143,6 @@ func (p *Parser) parseBooleanLiteral() ast.BooleanLiteral {
 	return ast.BooleanLiteral{
 		Location: token.Location,
 		Boolean:  token.Text,
-		Type:     utils.Unit{},
 	}
 }
 
@@ -178,7 +160,6 @@ func (p *Parser) parseUnary() ast.Expression {
 		factor = ast.Unary{
 			Op:       operator,
 			Exp:      factor,
-			Type:     utils.Unit{},
 			Location: p.peek().Location,
 		}
 	}
@@ -195,7 +176,6 @@ func (p *Parser) parseWhileLoop() ast.Expression {
 		Location:  loc,
 		Condition: condition,
 		Looping:   looping,
-		Type:      utils.Unit{},
 	}
 }
 
@@ -207,7 +187,6 @@ func (p *Parser) parseTermPrecedence(precedence int) ast.Expression {
 		left = p.parseTermPrecedence(precedence + 1)
 	}
 	for contains(precedenceLevels[precedence], p.peek().Text) {
-		fmt.Println("here in parseTermPrecedence")
 		operatorToken := p.consume(nil)
 		operator := operatorToken.Text
 		var right ast.Expression
@@ -221,7 +200,6 @@ func (p *Parser) parseTermPrecedence(precedence int) ast.Expression {
 			Left:     left,
 			Op:       operator,
 			Right:    right,
-			Type:     utils.Unit{},
 		}
 	}
 	return left
@@ -288,7 +266,6 @@ func (p *Parser) parseFunction(callee ast.Expression) ast.Expression {
 		Location: loc,
 		Name:     callee,
 		Args:     args,
-		Type:     utils.Unit{},
 	}
 }
 
@@ -304,7 +281,6 @@ func (p *Parser) parseExpression() ast.Expression {
 			Right:    right,
 			Op:       operator,
 			Left:     left,
-			Type:     utils.Unit{},
 		}
 	}
 	if p.peek().Text == "=" {
@@ -316,7 +292,6 @@ func (p *Parser) parseExpression() ast.Expression {
 			Right:    right,
 			Op:       operator,
 			Left:     left,
-			Type:     utils.Unit{},
 		}
 	}
 	if !contains(allowedIdentifiers, p.peekOffset(-1).Text) &&
@@ -343,7 +318,6 @@ func (p *Parser) parseTopExpression() ast.Expression {
 			Variable: decl,
 			Value:    declVal,
 			Typed:    typed,
-			Type:     utils.Unit{},
 		}
 	}
 	return p.parseExpression()
@@ -368,7 +342,6 @@ func (p *Parser) parseBlock() ast.Expression {
 			endLoc := p.peek().Location
 			return ast.Block{
 				Location:    endLoc,
-				Type:        utils.Unit{},
 				Expressions: expressions,
 				Result:      expression,
 			}

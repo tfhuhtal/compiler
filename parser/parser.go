@@ -24,7 +24,6 @@ var precedenceLevels = [][]string{
 }
 
 var allowedIdentifiers = []string{
-	"var",
 	"if",
 	"else",
 	"then",
@@ -47,8 +46,12 @@ func contains(slice []string, item string) bool {
 }
 
 func (p *Parser) peek() tokenizer.Token {
-	if p.pos < len(p.tokens) {
-		return p.tokens[p.pos]
+	return p.peekOffset(0)
+}
+
+func (p *Parser) peekOffset(n int) tokenizer.Token {
+	if p.pos+n < len(p.tokens) && (p.pos+n) >= 0 {
+		return p.tokens[p.pos+n]
 	} else if len(p.tokens) == 0 {
 		return tokenizer.Token{
 			Location: tokenizer.SourceLocation{File: "", Line: 1, Column: 1},
@@ -61,18 +64,6 @@ func (p *Parser) peek() tokenizer.Token {
 		Location: p.tokens[len(p.tokens)-1].Location,
 		Type:     "end",
 		Text:     "",
-	}
-}
-
-func (p *Parser) peekPrev() tokenizer.Token {
-	if p.pos-1 >= 0 {
-		return p.tokens[p.pos-1]
-	} else {
-		return tokenizer.Token{
-			Location: p.tokens[len(p.tokens)-1].Location,
-			Type:     "end",
-			Text:     "",
-		}
 	}
 }
 
@@ -216,6 +207,7 @@ func (p *Parser) parseTermPrecedence(precedence int) ast.Expression {
 		left = p.parseTermPrecedence(precedence + 1)
 	}
 	for contains(precedenceLevels[precedence], p.peek().Text) {
+		fmt.Println("here in parseTermPrecedence")
 		operatorToken := p.consume(nil)
 		operator := operatorToken.Text
 		var right ast.Expression
@@ -240,16 +232,18 @@ func (p *Parser) parseFactor() ast.Expression {
 	var res ast.Expression
 	if token.Type == "Punctuation" {
 		if token.Text == "{" {
+			p.consume("{")
 			res = p.parseBlock()
+			p.consume("}")
 		} else if token.Text == "(" {
 			res = p.parseParenthesised()
 		} else {
-			panic(fmt.Sprintf("Unexpected token %v, expexted left brace", p.peek().Text))
+			panic(fmt.Sprintf(
+				"Unexpected token %v, expexted left brace at location %v",
+				p.peek().Text, p.peek().Location))
 		}
 	} else if token.Text == "if" {
 		res = p.parseIfExpression()
-	} else if token.Text == "var" {
-		res = nil
 	} else if token.Text == "true" || token.Text == "false" {
 		res = p.parseBooleanLiteral()
 	} else if token.Text == "while" {
@@ -259,11 +253,12 @@ func (p *Parser) parseFactor() ast.Expression {
 		if p.peek().Type == "IntLiteral" {
 			panic(fmt.Sprintf(
 				"Two consecutive int literals %s, %s",
-				p.peekPrev().Text, p.peek().Text))
+				p.peekOffset(-1).Text, p.peek().Text))
 		}
 	} else if token.Type == "Identifier" {
-		if p.peekPrev().Type == "Identifier" && !contains(allowedIdentifiers, p.peekPrev().Text) {
-			panic("Not allowed Identifier: " + p.peekPrev().Text)
+		if p.peekOffset(-1).Type == "Identifier" &&
+			!contains(allowedIdentifiers, p.peekOffset(-1).Text) {
+			panic("Not allowed Identifier: " + p.peekOffset(-1).Text)
 		}
 		res = p.parseIdentifier()
 	} else if token.Type == "" {
@@ -324,8 +319,9 @@ func (p *Parser) parseExpression() ast.Expression {
 			Type:     utils.Unit{},
 		}
 	}
-	if !contains(allowedIdentifiers, p.peekPrev().Text) && p.peekPrev().Type == "Identifier" && p.peek().Type == "Identifier" {
-		panic("Not allowed expression: " + p.peekPrev().Text)
+	if !contains(allowedIdentifiers, p.peekOffset(-1).Text) &&
+		p.peekOffset(-1).Type == "Identifier" && p.peek().Type == "Identifier" {
+		panic("Not allowed expression: " + p.peekOffset(-1).Text)
 	}
 	return left
 }
@@ -354,90 +350,42 @@ func (p *Parser) parseTopExpression() ast.Expression {
 }
 
 func (p *Parser) parseBlock() ast.Expression {
-	if p.peek().Text == "{" {
-		p.consume("{")
-	}
-	loc := p.peek().Location
 	var expressions []ast.Expression
-	var left ast.Expression
+
 	for {
+		expression := p.parseTopExpression()
+
+		if p.peek().Text == ";" || p.peekOffset(-1).Text == "}" &&
+			!contains([]string{"", "}"}, p.peek().Text) {
+			if p.peek().Text == ";" {
+				p.consume(";")
+			}
+			expressions = append(expressions, expression)
+			expression = nil
+		}
+
 		if p.peek().Text == "}" || p.peek().Type == "end" {
 			endLoc := p.peek().Location
-			p.consume(nil)
-			left = ast.Block{
-				Location:    loc,
-				Expressions: expressions,
-				Result: ast.Literal{
-					Location: endLoc,
-					Value:    nil,
-					Type:     utils.Unit{},
-				},
-				Type: utils.Unit{},
-			}
-			break
-		}
-
-		expression := p.parseTopExpression()
-		if _, ok := expression.(ast.Literal); ok {
-			if p.peek().Text == "{" {
-				panic("Not allowed")
-			}
-		}
-		_, ok := expression.(ast.Declaration)
-
-		if p.peek().Type == "end" && ok {
-			left = ast.Block{
-				Location:    loc,
-				Expressions: []ast.Expression{expression},
-				Result:      nil,
+			return ast.Block{
+				Location:    endLoc,
 				Type:        utils.Unit{},
-			}
-			break
-		} else if p.peek().Text == "}" || p.peek().Type == "end" {
-			p.consume(nil)
-			left = ast.Block{
-				Location:    loc,
 				Expressions: expressions,
 				Result:      expression,
-				Type:        utils.Unit{},
 			}
-			if contains([]string{"+", "-", "*", "/", "%"}, p.peek().Text) {
-				op := p.consume(nil)
-				right := p.parseTopExpression()
-				res := ast.BinaryOp{
-					Location: loc,
-					Left:     left,
-					Op:       op.Text,
-					Right:    right,
-					Type:     utils.Unit{},
-				}
-				left = res
+		}
 
-			}
-			break
-		}
-		expressions = append(expressions, expression)
-		if p.peek().Text == ";" {
-			p.consume(";")
+		if expression != nil {
+			panic(fmt.Sprintf("Result but no block end"))
 		}
 	}
-	// TODO: FIX special case
-	if fmt.Sprintf("%v", left) == "{[] {[] {[] {123 { 4 13} {}} { 4 13} {}} { 3 9} {}} { 2 5} {}}" && (p.peekPrev().Text == ";" || p.peek().Text == ";") {
-		return ast.Block{
-			Type:        utils.Unit{},
-			Location:    loc,
-			Expressions: []ast.Expression{ast.Literal{Type: utils.Int{}, Location: loc, Value: uint64(123)}},
-			Result:      nil,
-		}
-	}
-	return left
 }
 
-func (p *Parser) Parse() ast.Expression {
+func Parse(tokens []tokenizer.Token) ast.Expression {
+	p := new(tokens)
 	expr := p.parseBlock()
 	return expr
 }
 
-func New(tokens []tokenizer.Token) *Parser {
+func new(tokens []tokenizer.Token) *Parser {
 	return &Parser{tokens: tokens, pos: 0}
 }

@@ -7,7 +7,6 @@ import (
 	"compiler/parser"
 	"compiler/tokenizer"
 	"compiler/typechecker"
-	"compiler/utils"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -20,7 +19,6 @@ import (
 )
 
 func callCompiler(sourceCode string, file string) []byte {
-	fmt.Println(sourceCode)
 	var output []byte
 	defer func() {
 		if r := recover(); r != nil {
@@ -28,42 +26,11 @@ func callCompiler(sourceCode string, file string) []byte {
 			output = []byte(fmt.Sprintf("compiler error: %s", r))
 		}
 	}()
-
 	tokens := tokenizer.Tokenize(sourceCode, file)
-
-	p := parser.New(tokens)
-	res := p.Parse()
-	/* fmt.Println(res)*/
-
+	res := parser.Parse(tokens)
 	typechecker.Type(res)
-
-	rootTypes := map[irgenerator.IRVar]utils.Type{
-		"+":   utils.Int{},
-		"*":   utils.Int{},
-		"/":   utils.Int{},
-		"%":   utils.Int{},
-		"-":   utils.Int{},
-		">":   utils.Bool{},
-		"==":  utils.Bool{},
-		"<=":  utils.Bool{},
-		"<":   utils.Bool{},
-		">=":  utils.Bool{},
-		"!=":  utils.Bool{},
-		"and": utils.Bool{},
-		"or":  utils.Bool{},
-	}
-
-	gen := irgenerator.NewIRGenerator(rootTypes)
-	instructions := gen.Generate(res)
-
-	/* for _, i := range instructions {*/
-	/*fmt.Println(i)*/
-	/*}*/
-
+	instructions := irgenerator.Generate(res)
 	asm := asmgenerator.GenerateASM(instructions)
-
-	//fmt.Println(asm)
-
 	output, _ = assembler.Assemble(asm, "")
 	return output
 }
@@ -195,14 +162,3 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Error: Unknown command")
 	}
 }
-
-// { { 1 }; 2 { 3 } }
-//
-//
-//{
-//    {
-//        {
-//            123
-//        }
-//    }
-//};

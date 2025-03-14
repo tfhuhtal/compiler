@@ -18,7 +18,7 @@ type IRGenerator struct {
 	instructions []ir.Instruction
 }
 
-func NewIRGenerator(rootTypes map[IRVar]Type) *IRGenerator {
+func new(rootTypes map[IRVar]Type) *IRGenerator {
 	gen := &IRGenerator{
 		varTypes:     make(map[IRVar]Type),
 		rootTypes:    rootTypes,
@@ -31,7 +31,25 @@ func NewIRGenerator(rootTypes map[IRVar]Type) *IRGenerator {
 	return gen
 }
 
-func (g *IRGenerator) Generate(rootExpr ast.Expression) []ir.Instruction {
+func Generate(rootExpr ast.Expression) []ir.Instruction {
+	rootTypes := map[IRVar]utils.Type{
+		"+":   utils.Int{},
+		"*":   utils.Int{},
+		"/":   utils.Int{},
+		"%":   utils.Int{},
+		"-":   utils.Int{},
+		">":   utils.Bool{},
+		"==":  utils.Bool{},
+		"<=":  utils.Bool{},
+		"<":   utils.Bool{},
+		">=":  utils.Bool{},
+		"!=":  utils.Bool{},
+		"and": utils.Bool{},
+		"or":  utils.Bool{},
+	}
+
+	g := new(rootTypes)
+
 	rootSymTab := utils.NewSymTab[IRVar](nil)
 	for v := range g.varTypes {
 		rootSymTab.Table[v] = v
@@ -221,7 +239,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 			Source:          value,
 			Dest:            newVar,
 		})
-		return newVar
+		return "unit"
 
 	case ast.IfExpression:
 		thenLabel := g.newLabel()

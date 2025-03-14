@@ -7,28 +7,23 @@ import (
 	"strings"
 )
 
-// Location is an alias for tokenizer.SourceLocation
 type Location = tokenizer.SourceLocation
 type Type = utils.Type
 
-// Instruction defines an IR instruction.
 type Instruction interface {
 	isInstruction()
 	String() string
 	GetVars() []IRVar
 }
 
-// BaseInstruction is embedded by all concrete instruction types.
 type BaseInstruction struct {
 	Location
 }
 
 func (BaseInstruction) isInstruction() {}
 
-// IRVar represents an IR variable.
 type IRVar = string
 
-// LoadBoolConst represents loading a boolean constant into Dest.
 type LoadBoolConst struct {
 	BaseInstruction
 	Value bool
@@ -43,7 +38,6 @@ func (l LoadBoolConst) GetVars() []IRVar {
 	return []IRVar{l.Dest}
 }
 
-// LoadIntConst represents loading an integer constant into Dest.
 type LoadIntConst struct {
 	BaseInstruction
 	Value uint64
@@ -58,7 +52,6 @@ func (l LoadIntConst) GetVars() []IRVar {
 	return []IRVar{l.Dest}
 }
 
-// Copy represents copying a value from Source to Dest.
 type Copy struct {
 	BaseInstruction
 	Source IRVar
@@ -73,7 +66,6 @@ func (c Copy) GetVars() []IRVar {
 	return []IRVar{c.Source, c.Dest}
 }
 
-// Call represents calling a function or built-in.
 type Call struct {
 	BaseInstruction
 	Fun  IRVar
@@ -91,7 +83,6 @@ func (c Call) GetVars() []IRVar {
 	return append([]IRVar{c.Dest}, c.Args...)
 }
 
-// Jump represents an unconditional jump.
 type Jump struct {
 	BaseInstruction
 	Label Label
@@ -105,7 +96,6 @@ func (j Jump) GetVars() []IRVar {
 	return nil
 }
 
-// CondJump represents a conditional jump.
 type CondJump struct {
 	BaseInstruction
 	Cond      IRVar
@@ -121,7 +111,6 @@ func (c CondJump) GetVars() []IRVar {
 	return []IRVar{c.Cond}
 }
 
-// Label is used for jump targets.
 type Label struct {
 	BaseInstruction
 	Label string

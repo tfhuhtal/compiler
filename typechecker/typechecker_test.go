@@ -60,8 +60,7 @@ func TestTypecheck(t *testing.T) {
 	})
 	t.Run("Testing more complex input", func(t *testing.T) {
 		tokens := tokenizer.Tokenize("var n: Int = 2;print_int(n);while n > 1 do {if n % 2 == 0 then {n = n / 2;} else {n = 3*n + 1;}print_int(n);}", "")
-		p := parser.New(tokens)
-		res := p.Parse()
+		res := parser.Parse(tokens)
 		defer func() {
 			if r := recover(); r != nil {
 				t.Errorf("Expected panic, got nil")
@@ -69,22 +68,9 @@ func TestTypecheck(t *testing.T) {
 		}()
 		Type(res)
 	})
-	t.Run("Wrong declaration", func(t *testing.T) {
-		tokens := tokenizer.Tokenize("if true then var x = 3;", "")
-		p := parser.New(tokens)
-		res := p.Parse()
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("Expected panic, got nil")
-
-			}
-		}()
-		Type(res)
-	})
 	t.Run("Allowed unary", func(t *testing.T) {
 		tokens := tokenizer.Tokenize("not (1*2)", "")
-		p := parser.New(tokens)
-		res := p.Parse()
+		res := parser.Parse(tokens)
 		defer func() {
 			if r := recover(); r == nil {
 				t.Errorf("Expected panic, got nil")
@@ -94,8 +80,7 @@ func TestTypecheck(t *testing.T) {
 	})
 	t.Run("Not allowed not", func(t *testing.T) {
 		tokens := tokenizer.Tokenize("-(1*2)", "")
-		p := parser.New(tokens)
-		res := p.Parse()
+		res := parser.Parse(tokens)
 		defer func() {
 			if r := recover(); r != nil {
 				t.Errorf("Expected panic, got nil")

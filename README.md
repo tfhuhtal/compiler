@@ -44,6 +44,15 @@ go run main.go serve
 Then you can send a POST request to `http://localhost:3000/` with the following body:
 ```json
 {
-    "code": "int main() { return 0; }"
+    "code": "var n: Int = read_int();
+          print_int(n);
+          while n > 1 do {
+            if n % 2 == 0 then {
+              n = n / 2;
+            } else {
+              n = 3*n + 1;
+            }
+            print_int(n);
+          }"
 }
 ```

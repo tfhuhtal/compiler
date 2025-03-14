@@ -10,7 +10,6 @@ type Location = tokenizer.SourceLocation
 type Expression interface {
 	isExpression()
 	GetLocation() Location
-	GetType() utils.Type
 }
 
 type Literal struct {
@@ -143,48 +142,4 @@ type WhileLoop struct {
 func (WhileLoop) isExpression() {}
 func (w WhileLoop) GetLocation() Location {
 	return w.Location
-}
-
-func (l Literal) GetType() utils.Type {
-	return l.Type
-}
-
-func (i Identifier) GetType() utils.Type {
-	return i.Type
-}
-
-func (b BinaryOp) GetType() utils.Type {
-	return b.Type
-}
-
-func (i IfExpression) GetType() utils.Type {
-	return i.Type
-}
-
-func (f Function) GetType() utils.Type {
-	return f.Type
-}
-
-func (b BooleanLiteral) GetType() utils.Type {
-	return b.Type
-}
-
-func (u Unary) GetType() utils.Type {
-	return u.Type
-}
-
-func (b Block) GetType() utils.Type {
-	return b.Type
-}
-
-func (f FunctionTypeExpression) GetType() utils.Type {
-	return f.Type
-}
-
-func (d Declaration) GetType() utils.Type {
-	return d.Type
-}
-
-func (w WhileLoop) GetType() utils.Type {
-	return w.Type
 }

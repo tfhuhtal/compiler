@@ -175,7 +175,6 @@ func GenerateASM(instructions []ir.Instruction) string {
 	emit("popq %rbp")
 	emit("ret")
 
-	// Optionally append standard library stubs if needed
 	return strings.Join(lines, "\n")
 }
 

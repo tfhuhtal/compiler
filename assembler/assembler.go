@@ -1,17 +1,13 @@
 package assembler
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 )
 
 func Assemble(assemblyCode, outputFile string) ([]byte, error) {
-	tempDir, err := ioutil.TempDir("", "compiler_")
-	if err != nil {
-		return nil, err
-	}
+	tempDir := os.TempDir()
 	defer os.RemoveAll(tempDir)
 
 	stdlibS := filepath.Join(tempDir, "stdlib.s")
@@ -20,10 +16,10 @@ func Assemble(assemblyCode, outputFile string) ([]byte, error) {
 	programO := filepath.Join(tempDir, "program.o")
 	outputExe := filepath.Join(tempDir, "a.out")
 
-	if err := ioutil.WriteFile(stdlibS, []byte(STDLIB_ASM_CODE), 0644); err != nil {
+	if err := os.WriteFile(stdlibS, []byte(STDLIB_ASM_CODE), 0644); err != nil {
 		return nil, err
 	}
-	if err := ioutil.WriteFile(programS, []byte(assemblyCode), 0644); err != nil {
+	if err := os.WriteFile(programS, []byte(assemblyCode), 0644); err != nil {
 		return nil, err
 	}
 
@@ -40,7 +36,7 @@ func Assemble(assemblyCode, outputFile string) ([]byte, error) {
 	if outputFile != "" {
 		return nil, os.Rename(outputExe, outputFile)
 	}
-	return ioutil.ReadFile(outputExe)
+	return os.ReadFile(outputExe)
 }
 
 const STDLIB_ASM_CODE = `

@@ -33,13 +33,13 @@ go test -v ./parser
 Run the compiler
 
 ```bash
-go run main.go compile <input-file> <output-file>
+go run main.go compile --input=<input> --output=<output-file>
 ```
 
 Run the compiler as server
 
 ```bash
-go run main.go serve
+go run main.go serve --host=0.0.0.0
 ```
 Then you can send a POST request to `http://localhost:3000/` with the following body:
 ```json

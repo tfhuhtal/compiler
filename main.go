@@ -30,6 +30,7 @@ func callCompiler(sourceCode string, file string) []byte {
 	res := parser.Parse(tokens)
 	typechecker.Type(res)
 	instructions := irgenerator.Generate(res)
+	fmt.Println(instructions)
 	asm := asmgenerator.GenerateASM(instructions)
 	output, _ = assembler.Assemble(asm, "")
 	return output

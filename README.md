@@ -56,3 +56,15 @@ Then you can send a POST request to `http://localhost:3000/` with the following 
           }"
 }
 ```
+
+Run the interpreter
+
+```bash
+go run main.go interpret --input=<input>
+```
+
+for example
+
+```bash
+go run main.go interpret --input="var a: Int = 0; var b: Int = 1; var next: Int = b; var count: Int = 1; while count <= 50 do { print_int(next); count = count + 1; a = b; b = next; next = a + b;}"
+```

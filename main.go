@@ -3,6 +3,7 @@ package main
 import (
 	"compiler/asmgenerator"
 	"compiler/assembler"
+	"compiler/interpreter"
 	"compiler/irgenerator"
 	"compiler/parser"
 	"compiler/tokenizer"
@@ -30,10 +31,15 @@ func callCompiler(sourceCode string, file string) []byte {
 	res := parser.Parse(tokens)
 	typechecker.Type(res)
 	instructions := irgenerator.Generate(res)
-	fmt.Println(instructions)
 	asm := asmgenerator.GenerateASM(instructions)
 	output, _ = assembler.Assemble(asm, "")
 	return output
+}
+
+func callInterpreter(sourceCode string, file string) string {
+	tokens := tokenizer.Tokenize(sourceCode, file)
+	parsed := parser.Parse(tokens)
+	return fmt.Sprintf("%v", interpreter.Interpret(parsed))
 }
 
 func handleConnection(conn net.Conn) {
@@ -119,7 +125,12 @@ func main() {
 			if len(matches) > 1 {
 				input = matches[1]
 			}
-
+		} else if matched, _ := regexp.MatchString(`^--inputFile=(.+)`, arg); matched {
+			re := regexp.MustCompile(`^--input=(.+)`)
+			matches := re.FindStringSubmatch(arg)
+			if len(matches) > 1 {
+				inputFile = matches[1]
+			}
 		} else if matched, _ := regexp.MatchString(`^--host=(.+)`, arg); matched {
 			re := regexp.MustCompile(`^--host=(.+)`)
 			matches := re.FindStringSubmatch(arg)
@@ -159,6 +170,9 @@ func main() {
 		os.WriteFile(outputFile, []byte(asm), 0644)
 	} else if command == "serve" {
 		runServer(host, port)
+	} else if command == "interpret" {
+		result := callInterpreter(input, inputFile)
+		fmt.Println(result)
 	} else {
 		fmt.Fprintln(os.Stderr, "Error: Unknown command")
 	}

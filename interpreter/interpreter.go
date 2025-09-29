@@ -60,9 +60,17 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 
 	case ast.IfExpression:
 		if interpret(n.Condition, symTab).(bool) {
-			return interpret(n.Then, symTab)
+			t := n.Then.(ast.Block)
+			for _, expr := range t.Expressions {
+				interpret(expr, symTab)
+			}
+			return interpret(t.Result, symTab)
 		} else {
-			return interpret(n.Else, symTab)
+			e := n.Else.(ast.Block)
+			for _, expr := range e.Expressions {
+				interpret(expr, symTab)
+			}
+			return interpret(e.Result, symTab)
 		}
 
 	case ast.Declaration:
@@ -75,11 +83,11 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 			panic(fmt.Sprintf("%s already declared", n.Variable))
 		}
 		if n.Typed.(ast.Identifier).Name == "Bool" {
-			if _, ok := value.(utils.Bool); !ok {
+			if _, ok := value.(bool); !ok {
 				panic("Must be boolean")
 			}
 		} else if n.Typed.(ast.Identifier).Name == "Int" {
-			if _, ok := value.(utils.Int); !ok {
+			if _, ok := value.(uint64); !ok {
 				panic("Must be integer")
 			}
 		}
@@ -116,11 +124,13 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 			for _, a := range n.Args {
 				v := interpret(a, symTab).(uint64)
 				fmt.Println(v)
+				return v
 			}
 		} else if n.Name.(ast.Identifier).Name == "print_bool" {
 			for _, a := range n.Args {
 				v := interpret(a, symTab).(bool)
 				fmt.Println(v)
+				return v
 			}
 		} else if n.Name.(ast.Identifier).Name == "read_int" {
 		}
@@ -141,9 +151,7 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 				_ = interpret(expr, symTab)
 			}
 		}
-		return block.Result
-	default:
-		panic(fmt.Sprintf("unsupported expression type %T", n))
+		return interpret(block.Result, symTab)
 	}
 	return nil
 }

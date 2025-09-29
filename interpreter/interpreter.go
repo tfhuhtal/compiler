@@ -6,8 +6,6 @@ import (
 	"fmt"
 )
 
-var blockCount = 0
-
 type Value = any
 
 type SymTab = utils.SymTab[Value]
@@ -129,8 +127,6 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 		return interpret(n.Name, symTab)
 
 	case ast.Block:
-		blockCount++
-		fmt.Println("här", blockCount)
 		tab := utils.NewSymTab(symTab)
 		for _, expr := range n.Expressions {
 			_ = interpret(expr, tab)
@@ -138,11 +134,14 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 		return interpret(n.Result, tab)
 
 	case ast.WhileLoop:
-		var res any
+		block := n.Looping.(ast.Block)
 		for interpret(n.Condition, symTab).(bool) {
-			res = interpret(n.Looping, symTab)
+			loop := block.Expressions
+			for _, expr := range loop {
+				_ = interpret(expr, symTab)
+			}
 		}
-		return res
+		return block.Result
 	default:
 		panic(fmt.Sprintf("unsupported expression type %T", n))
 	}

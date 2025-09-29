@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func callCompiler(sourceCode string, file string) []byte {
@@ -171,8 +172,10 @@ func main() {
 	} else if command == "serve" {
 		runServer(host, port)
 	} else if command == "interpret" {
+		start := time.Now()
 		result := callInterpreter(input, inputFile)
-		fmt.Println(result)
+		end := time.Since(start)
+		fmt.Println(result, "Time taken", end)
 	} else {
 		fmt.Fprintln(os.Stderr, "Error: Unknown command")
 	}

@@ -2,7 +2,6 @@ package ast
 
 import (
 	"compiler/tokenizer"
-	"compiler/utils"
 )
 
 type Location = tokenizer.SourceLocation
@@ -111,20 +110,50 @@ func (w WhileLoop) GetLocation() Location {
 	return w.Location
 }
 
+type FunctionCall struct {
+	Name     Expression
+	Args     []Expression
+	Location Location
+}
+
+func (FunctionCall) isExpression() {}
+func (f FunctionCall) GetLocation() Location {
+	return f.Location
+}
+
 type Module struct {
-	Functions []Function
-	Block     Block
+	Functions []Expression
+	Block     Expression
+	Location  Location
+}
+
+// Module is not actually expression but the sake of GO it has to be done like this
+func (Module) isExpression() {}
+func (m Module) GetLocation() Location {
+	return m.Location
 }
 
 type Param struct {
-	Name string
-	Type utils.Type
+	Name     Expression
+	Type     Expression
+	Location Location
 }
 
-type Function struct {
-	Name       Identifier
-	Params     []Param
-	ResultType utils.Type
-	Body       Block
+func (Param) isExpression() {}
+func (p Param) GetLocation() Location {
+	return p.Location
+}
+
+// Funtion is not actually expression but the sake of GO it has to be done like this
+type FunctionDefinition struct {
+	Name       Expression
+	Params     []Expression
+	ResultType Expression
+	Body       Expression
 	Location   Location
+}
+
+func (FunctionDefinition) isExpression() {}
+func (f FunctionDefinition) GetLocation() Location {
+	return f.Location
 }

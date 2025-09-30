@@ -33,6 +33,8 @@ var allowedIdentifiers = []string{
 	"false",
 	"and",
 	"or",
+	"fun",
+	"return",
 }
 
 func contains(slice []string, item string) bool {
@@ -243,12 +245,12 @@ func (p *Parser) parseFactor() ast.Expression {
 		panic("Invalid end of code")
 	}
 	if p.peek().Text == "(" {
-		res = p.parseFunction(res)
+		res = p.parseFunctionCall(res)
 	}
 	return res
 }
 
-func (p *Parser) parseFunction(callee ast.Expression) ast.Expression {
+func (p *Parser) parseFunctionCall(callee ast.Expression) ast.Expression {
 	var args []ast.Expression
 	loc := p.peek().Location
 	p.consume("(")
@@ -262,7 +264,7 @@ func (p *Parser) parseFunction(callee ast.Expression) ast.Expression {
 		}
 	}
 	p.consume(")")
-	return ast.Function{
+	return ast.FunctionCall{
 		Location: loc,
 		Name:     callee,
 		Args:     args,
@@ -270,6 +272,7 @@ func (p *Parser) parseFunction(callee ast.Expression) ast.Expression {
 }
 
 func (p *Parser) parseExpression() ast.Expression {
+	fmt.Println("goes herer")
 	precedence := 0
 	left := p.parseTermPrecedence(precedence + 1)
 	for contains(precedenceLevels[precedence], p.peek().Text) {
@@ -348,14 +351,74 @@ func (p *Parser) parseBlock() ast.Expression {
 		}
 
 		if expression != nil {
-			panic(fmt.Sprintf("Result but no block end"))
+			panic(fmt.Sprintf("Result but no block end: %v", expression))
 		}
+	}
+}
+
+func (p *Parser) parseParams() []ast.Expression {
+	var params []ast.Expression
+	for p.peek().Text != ")" {
+		loc := p.peek().Location
+		name := p.parseIdentifier()
+		p.consume(":")
+		typed := p.parseIdentifier()
+		param := ast.Param{
+			Name:     name,
+			Type:     typed,
+			Location: loc,
+		}
+		params = append(params, param)
+		if p.peek().Text != "," {
+			break
+		}
+		p.consume(",")
+	}
+	return params
+}
+
+func (p *Parser) parseFunctionDefinition() ast.Expression {
+	loc := p.peek().Location
+	p.consume("fun")
+	name := p.parseIdentifier()
+	p.consume("(")
+	params := p.parseParams()
+	p.consume(")")
+	p.consume(":")
+	resultType := p.parseIdentifier()
+	body := p.parseBlock()
+	fmt.Println(name, params)
+	return ast.FunctionDefinition{
+		Name:       name,
+		Params:     params,
+		ResultType: resultType,
+		Body:       body,
+		Location:   loc,
+	}
+}
+
+func (p *Parser) parseModule() ast.Expression {
+	loc := p.peek().Location
+	var functionDefinitions []ast.Expression
+	for p.peek().Text == "fun" {
+		functionDefinitions = append(functionDefinitions, p.parseFunctionDefinition())
+	}
+
+	block := p.parseBlock()
+	if len(functionDefinitions) == 0 {
+		return block
+	}
+
+	return ast.Module{
+		Functions: functionDefinitions,
+		Block:     block,
+		Location:  loc,
 	}
 }
 
 func Parse(tokens []tokenizer.Token) ast.Expression {
 	p := new(tokens)
-	expr := p.parseBlock()
+	expr := p.parseModule()
 	return expr
 }
 

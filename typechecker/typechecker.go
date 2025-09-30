@@ -128,7 +128,7 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		}
 		return res
 
-	case ast.Function:
+	case ast.FunctionCall:
 		var params []utils.Type
 		for _, par := range n.Args {
 			params = append(params, typecheck(par, symTab))

@@ -117,9 +117,10 @@ func TestParser_Block2(t *testing.T) {
 	}
 }
 
-// func TestParser_Fun(t *testing.T) {
-// tokens := tokenizer.Tokenize(`fun square(x: Int): Int {
-// return x * x;
-// }`, "")
-// 	res := Parse(tokens)
-// }
+func TestParser_Fun(t *testing.T) {
+	tokens := tokenizer.Tokenize(`fun square(x: Int): Int {
+								return x * x;
+							  }`, "")
+	Parse(tokens)
+
+}

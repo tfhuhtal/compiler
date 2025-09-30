@@ -333,7 +333,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		}
 		return res
 
-	case ast.Function:
+	case ast.FunctionCall:
 		var args []IRVar
 		for _, arg := range e.Args {
 			args = append(args, g.visit(st, arg))

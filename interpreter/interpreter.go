@@ -119,7 +119,7 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 		}
 		return false
 
-	case ast.Function:
+	case ast.FunctionCall:
 		if n.Name.(ast.Identifier).Name == "print_int" {
 			for _, a := range n.Args {
 				v := interpret(a, symTab).(uint64)

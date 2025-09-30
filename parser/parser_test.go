@@ -116,3 +116,10 @@ func TestParser_Block2(t *testing.T) {
 		t.Errorf("Expected %v but got %v", expected, res)
 	}
 }
+
+// func TestParser_Fun(t *testing.T) {
+// tokens := tokenizer.Tokenize(`fun square(x: Int): Int {
+// return x * x;
+// }`, "")
+// 	res := Parse(tokens)
+// }

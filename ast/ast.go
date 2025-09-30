@@ -2,6 +2,7 @@ package ast
 
 import (
 	"compiler/tokenizer"
+	"compiler/utils"
 )
 
 type Location = tokenizer.SourceLocation
@@ -55,17 +56,6 @@ func (i IfExpression) GetLocation() Location {
 	return i.Location
 }
 
-type Function struct {
-	Name     Expression
-	Args     []Expression
-	Location Location
-}
-
-func (Function) isExpression() {}
-func (f Function) GetLocation() Location {
-	return f.Location
-}
-
 type BooleanLiteral struct {
 	Boolean  string
 	Location Location
@@ -98,17 +88,6 @@ func (b Block) GetLocation() Location {
 	return b.Location
 }
 
-type FunctionTypeExpression struct {
-	VariableTypes []Expression
-	ResultType    Expression
-	Location      Location
-}
-
-func (FunctionTypeExpression) isExpression() {}
-func (f FunctionTypeExpression) GetLocation() Location {
-	return f.Location
-}
-
 type Declaration struct {
 	Variable Expression
 	Value    Expression
@@ -130,4 +109,22 @@ type WhileLoop struct {
 func (WhileLoop) isExpression() {}
 func (w WhileLoop) GetLocation() Location {
 	return w.Location
+}
+
+type Module struct {
+	Functions []Function
+	Block     Block
+}
+
+type Param struct {
+	Name string
+	Type utils.Type
+}
+
+type Function struct {
+	Name       Identifier
+	Params     []Param
+	ResultType utils.Type
+	Body       Block
+	Location   Location
 }

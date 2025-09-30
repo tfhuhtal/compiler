@@ -66,7 +66,7 @@ func (p *Parser) peekOffset(n int) tokenizer.Token {
 	}
 }
 
-func (p *Parser) consume(expected interface{}) tokenizer.Token {
+func (p *Parser) consume(expected any) tokenizer.Token {
 	token := p.peek()
 
 	if expected == nil {

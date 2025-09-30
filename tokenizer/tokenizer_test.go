@@ -39,3 +39,35 @@ func TestTokenize(t *testing.T) {
 		}
 	}
 }
+
+func TestTokenize_Fun(t *testing.T) {
+	tokens := Tokenize(`fun square(x: Int): Int {
+									return x * x;
+								}`, "")
+	expected := []Token{
+		{Text: "fun", Type: Identifier, Location: L},
+		{Text: "square", Type: Identifier, Location: L},
+		{Text: "(", Type: Punctuation, Location: L},
+		{Text: "x", Type: Identifier, Location: L},
+		{Text: ":", Type: Punctuation, Location: L},
+		{Text: "Int", Type: Identifier, Location: L},
+		{Text: ")", Type: Punctuation, Location: L},
+		{Text: ":", Type: Punctuation, Location: L},
+		{Text: "Int", Type: Identifier, Location: L},
+		{Text: "{", Type: Punctuation, Location: L},
+		{Text: "return", Type: Identifier, Location: L},
+		{Text: "x", Type: Identifier, Location: L},
+		{Text: "*", Type: Operator, Location: L},
+		{Text: "x", Type: Identifier, Location: L},
+		{Text: ";", Type: Punctuation, Location: L},
+		{Text: "}", Type: Punctuation, Location: L},
+	}
+	if len(tokens) != len(expected) {
+		t.Errorf("Expected %d tokens, got %d", len(expected), len(tokens))
+	}
+	for i := range tokens {
+		if !tokens[i].Equal(expected[i]) {
+			t.Errorf("Expected token %v, got %v", expected[i], tokens[i])
+		}
+	}
+}

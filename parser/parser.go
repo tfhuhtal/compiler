@@ -228,6 +228,10 @@ func (p *Parser) parseFactor() ast.Expression {
 		res = p.parseBooleanLiteral()
 	} else if token.Text == "while" {
 		res = p.parseWhileLoop()
+	} else if token.Text == "return" {
+		res = p.parseReturnExpression()
+	} else if token.Text == "fun" {
+		return res
 	} else if token.Type == "IntLiteral" {
 		res = p.parseIntLiteral()
 		if p.peek().Type == "IntLiteral" {
@@ -272,7 +276,6 @@ func (p *Parser) parseFunctionCall(callee ast.Expression) ast.Expression {
 }
 
 func (p *Parser) parseExpression() ast.Expression {
-	fmt.Println("goes herer")
 	precedence := 0
 	left := p.parseTermPrecedence(precedence + 1)
 	for contains(precedenceLevels[precedence], p.peek().Text) {
@@ -326,36 +329,6 @@ func (p *Parser) parseTopExpression() ast.Expression {
 	return p.parseExpression()
 }
 
-func (p *Parser) parseBlock() ast.Expression {
-	var expressions []ast.Expression
-
-	for {
-		expression := p.parseTopExpression()
-
-		if p.peek().Text == ";" || p.peekOffset(-1).Text == "}" &&
-			!contains([]string{"", "}"}, p.peek().Text) {
-			if p.peek().Text == ";" {
-				p.consume(";")
-			}
-			expressions = append(expressions, expression)
-			expression = nil
-		}
-
-		if p.peek().Text == "}" || p.peek().Type == "end" {
-			endLoc := p.peek().Location
-			return ast.Block{
-				Location:    endLoc,
-				Expressions: expressions,
-				Result:      expression,
-			}
-		}
-
-		if expression != nil {
-			panic(fmt.Sprintf("Result but no block end: %v", expression))
-		}
-	}
-}
-
 func (p *Parser) parseParams() []ast.Expression {
 	var params []ast.Expression
 	for p.peek().Text != ")" {
@@ -377,6 +350,46 @@ func (p *Parser) parseParams() []ast.Expression {
 	return params
 }
 
+func (p *Parser) parseReturnExpression() ast.Expression {
+	loc := p.peek().Location
+	p.consume("return")
+	result := p.parseExpression()
+	return ast.ReturnExpression{
+		Result:   result,
+		Location: loc,
+	}
+}
+
+func (p *Parser) parseBlock() ast.Expression {
+	var expressions []ast.Expression
+
+	for {
+		expression := p.parseTopExpression()
+
+		if p.peek().Text == ";" || p.peekOffset(-1).Text == "}" &&
+			!contains([]string{"", "}"}, p.peek().Text) {
+			if p.peek().Text == ";" {
+				p.consume(";")
+			}
+			expressions = append(expressions, expression)
+			expression = nil
+		}
+
+		if p.peek().Text == "}" || p.peek().Type == "end" || p.peek().Text == "fun" {
+			endLoc := p.peek().Location
+			return ast.Block{
+				Location:    endLoc,
+				Expressions: expressions,
+				Result:      expression,
+			}
+		}
+
+		if expression != nil {
+			panic(fmt.Sprintf("Result but no block end: %v", expression))
+		}
+	}
+}
+
 func (p *Parser) parseFunctionDefinition() ast.Expression {
 	loc := p.peek().Location
 	p.consume("fun")
@@ -387,7 +400,6 @@ func (p *Parser) parseFunctionDefinition() ast.Expression {
 	p.consume(":")
 	resultType := p.parseIdentifier()
 	body := p.parseBlock()
-	fmt.Println(name, params)
 	return ast.FunctionDefinition{
 		Name:       name,
 		Params:     params,

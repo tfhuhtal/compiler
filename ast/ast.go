@@ -144,6 +144,16 @@ func (p Param) GetLocation() Location {
 	return p.Location
 }
 
+type ReturnExpression struct {
+	Result   Expression
+	Location Location
+}
+
+func (ReturnExpression) isExpression() {}
+func (r ReturnExpression) GetLocation() Location {
+	return r.Location
+}
+
 // Funtion is not actually expression but the sake of GO it has to be done like this
 type FunctionDefinition struct {
 	Name       Expression

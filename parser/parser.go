@@ -33,6 +33,8 @@ var allowedIdentifiers = []string{
 	"false",
 	"and",
 	"or",
+	"break",
+	"continue",
 	"fun",
 	"return",
 }

@@ -42,9 +42,9 @@ Run the compiler as server
 go run main.go serve --host=0.0.0.0
 ```
 Then you can send a POST request to `http://localhost:3000/` with the following body:
-```json
+```
 {
-    "code": "var n: Int = read_int();
+  "code": "var n: Int = read_int();
           print_int(n);
           while n > 1 do {
             if n % 2 == 0 then {

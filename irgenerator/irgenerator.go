@@ -13,9 +13,11 @@ type Type = utils.Type
 type SymTab = utils.SymTab[IRVar]
 
 type IRGenerator struct {
-	varTypes     map[IRVar]Type
-	rootTypes    map[IRVar]Type
-	instructions []ir.Instruction
+	varTypes       map[IRVar]Type
+	rootTypes      map[IRVar]Type
+	instructions   []ir.Instruction
+	loopStartLabel *ir.Label
+	loopEndLabel   *ir.Label
 }
 
 func new(rootTypes map[IRVar]Type) *IRGenerator {
@@ -309,12 +311,38 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 			ElseLabel:       whileEndLabel,
 		})
 		g.instructions = append(g.instructions, whileBodyLabel)
+		prevStart := g.loopStartLabel
+		prevEnd := g.loopEndLabel
+		g.loopStartLabel = &whileStartLabel
+		g.loopEndLabel = &whileEndLabel
 		g.visit(st, e.Looping)
+		g.loopStartLabel = prevStart
+		g.loopEndLabel = prevEnd
 		g.instructions = append(g.instructions, ir.Jump{
 			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
 			Label:           whileStartLabel,
 		})
 		g.instructions = append(g.instructions, whileEndLabel)
+		return "unit"
+
+	case ast.BreakExpression:
+		if g.loopEndLabel == nil {
+			panic("break outside of loop")
+		}
+		g.instructions = append(g.instructions, ir.Jump{
+			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
+			Label:           *g.loopEndLabel,
+		})
+		return "unit"
+
+	case ast.ContinueExpression:
+		if g.loopStartLabel == nil {
+			panic("continue outside of loop")
+		}
+		g.instructions = append(g.instructions, ir.Jump{
+			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
+			Label:           *g.loopStartLabel,
+		})
 		return "unit"
 
 	case ast.Block:

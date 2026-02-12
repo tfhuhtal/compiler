@@ -164,7 +164,14 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		if _, ok := cond.(utils.Bool); !ok {
 			panic(fmt.Sprintf("%s condition is not boolean", cond))
 		}
-		return typecheck(n.Looping, symTab)
+		typecheck(n.Looping, symTab)
+		return utils.Unit{}
+
+	case ast.BreakExpression:
+		return utils.Unit{}
+
+	case ast.ContinueExpression:
+		return utils.Unit{}
 
 	}
 	return utils.Unit{}

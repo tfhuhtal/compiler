@@ -10,6 +10,9 @@ type Value = any
 
 type SymTab = utils.SymTab[Value]
 
+type breakSignal struct{}
+type continueSignal struct{}
+
 func interpret(node ast.Expression, symTab *SymTab) Value {
 	switch n := node.(type) {
 
@@ -65,13 +68,14 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 				interpret(expr, symTab)
 			}
 			return interpret(t.Result, symTab)
-		} else {
+		} else if n.Else != nil {
 			e := n.Else.(ast.Block)
 			for _, expr := range e.Expressions {
 				interpret(expr, symTab)
 			}
 			return interpret(e.Result, symTab)
 		}
+		return nil
 
 	case ast.Declaration:
 		value := interpret(n.Value, symTab)
@@ -146,12 +150,43 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 	case ast.WhileLoop:
 		block := n.Looping.(ast.Block)
 		for interpret(n.Condition, symTab).(bool) {
-			loop := block.Expressions
-			for _, expr := range loop {
-				_ = interpret(expr, symTab)
+			brk := false
+			cont := false
+			allExprs := append(block.Expressions, block.Result)
+			for _, expr := range allExprs {
+				if expr == nil {
+					continue
+				}
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							switch r.(type) {
+							case breakSignal:
+								brk = true
+							case continueSignal:
+								cont = true
+							default:
+								panic(r)
+							}
+						}
+					}()
+					_ = interpret(expr, symTab)
+				}()
+				if brk || cont {
+					break
+				}
+			}
+			if brk {
+				break
 			}
 		}
-		return interpret(block.Result, symTab)
+		return nil
+
+	case ast.BreakExpression:
+		panic(breakSignal{})
+
+	case ast.ContinueExpression:
+		panic(continueSignal{})
 	}
 	return nil
 }

@@ -230,6 +230,12 @@ func (p *Parser) parseFactor() ast.Expression {
 		res = p.parseBooleanLiteral()
 	} else if token.Text == "while" {
 		res = p.parseWhileLoop()
+	} else if token.Text == "break" {
+		loc := p.consume(nil).Location
+		res = ast.BreakExpression{Location: loc}
+	} else if token.Text == "continue" {
+		loc := p.consume(nil).Location
+		res = ast.ContinueExpression{Location: loc}
 	} else if token.Text == "return" {
 		res = p.parseReturnExpression()
 	} else if token.Text == "fun" {

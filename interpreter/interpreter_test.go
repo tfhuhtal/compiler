@@ -22,6 +22,30 @@ func TestInterpreter_While(t *testing.T) {
 	}
 }
 
+func TestInterpreter_Break(t *testing.T) {
+	res := helper("var x: Int = 0; while true do { x = x + 1; if x == 5 then { break } }; x")
+	expected := "5"
+	if fmt.Sprintf("%v", res) != expected {
+		t.Errorf("Expected %v but got %v", expected, res)
+	}
+}
+
+func TestInterpreter_Continue(t *testing.T) {
+	res := helper("var x: Int = 0; var y: Int = 0; while x < 10 do { x = x + 1; if x % 2 == 0 then { continue }; y = y + 1 }; y")
+	expected := "5"
+	if fmt.Sprintf("%v", res) != expected {
+		t.Errorf("Expected %v but got %v", expected, res)
+	}
+}
+
+func TestInterpreter_BreakNested(t *testing.T) {
+	res := helper("var x: Int = 0; var y: Int = 0; while x < 10 do { x = x + 1; while true do { y = y + 1; break } }; y")
+	expected := "10"
+	if fmt.Sprintf("%v", res) != expected {
+		t.Errorf("Expected %v but got %v", expected, res)
+	}
+}
+
 func TestInterpreter_LangSpec(t *testing.T) {
 	res := helper(`
 								var n: Int = 100;

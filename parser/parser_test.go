@@ -98,6 +98,22 @@ func TestParser_While(t *testing.T) {
 	}
 }
 
+func TestParser_Break(t *testing.T) {
+	tokens := tokenizer.Tokenize("while true do { break; }", "")
+	res := Parse(tokens)
+	if res == nil {
+		t.Errorf("Expected expression, got nil")
+	}
+}
+
+func TestParser_Continue(t *testing.T) {
+	tokens := tokenizer.Tokenize("while true do { continue; }", "")
+	res := Parse(tokens)
+	if res == nil {
+		t.Errorf("Expected expression, got nil")
+	}
+}
+
 func TestParser_Block1(t *testing.T) {
 	tokens := tokenizer.Tokenize("{123};", "")
 	res := Parse(tokens)

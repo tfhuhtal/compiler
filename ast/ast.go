@@ -154,6 +154,24 @@ func (r ReturnExpression) GetLocation() Location {
 	return r.Location
 }
 
+type BreakExpression struct {
+	Location Location
+}
+
+func (BreakExpression) isExpression() {}
+func (b BreakExpression) GetLocation() Location {
+	return b.Location
+}
+
+type ContinueExpression struct {
+	Location Location
+}
+
+func (ContinueExpression) isExpression() {}
+func (c ContinueExpression) GetLocation() Location {
+	return c.Location
+}
+
 // Funtion is not actually expression but the sake of GO it has to be done like this
 type FunctionDefinition struct {
 	Name       Expression

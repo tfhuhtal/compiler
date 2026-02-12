@@ -89,4 +89,23 @@ func TestTypecheck(t *testing.T) {
 		Type(res)
 	})
 
+	t.Run("Break in while returns Unit", func(t *testing.T) {
+		tokens := tokenizer.Tokenize("while true do { break }", "")
+		res := parser.Parse(tokens)
+		got := Type(res)
+		if _, ok := got.(utils.Unit); !ok {
+			t.Errorf("Expected Unit type, got %T", got)
+		}
+	})
+	t.Run("Continue in while returns Unit", func(t *testing.T) {
+		tokens := tokenizer.Tokenize("var x: Int = 0; while x < 10 do { x = x + 1; continue }", "")
+		res := parser.Parse(tokens)
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Unexpected panic: %v", r)
+			}
+		}()
+		Type(res)
+	})
+
 }

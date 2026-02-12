@@ -1,5 +1,20 @@
 # compiler for University of Helsinki compilers course
 
+The full language spec can be found [here](https://hy-compilers.github.io/spring-2026/language-spec/).
+
+For example Fibonacci series looks like this:
+```bash
+
+fun fibonacci(x: Int): Int {
+  if x == 0 or x == 1 then {
+    return x;
+  } else {
+    return fibonacci(x - 1) + fibonacci(x - 2);
+  }
+}
+print_int(fibonacci(10));
+```
+
 ## Installation
 
 **Prequisites**: Go 1.23.5
@@ -30,7 +45,7 @@ go test -v ./parser
 
 ## Running
 
-Run the compiler
+Run the compiler:
 
 ```bash
 go run main.go compile --input=<input> --output=<output-file>

@@ -8,8 +8,50 @@ import (
 
 type SymTab = utils.SymTab[utils.Type]
 
+func resolveType(name string) utils.Type {
+	switch name {
+	case "Int":
+		return utils.Int{Name: "Int"}
+	case "Bool":
+		return utils.Bool{Name: "Bool"}
+	case "Unit":
+		return utils.Unit{Name: "Unit"}
+	default:
+		panic(fmt.Sprintf("Unknown type: %s", name))
+	}
+}
+
 func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 	switch n := node.(type) {
+	case ast.Module:
+		// First pass: register all function types for mutual recursion
+		for _, fn := range n.Functions {
+			fd := fn.(ast.FunctionDefinition)
+			name := fd.Name.(ast.Identifier).Name
+			var paramTypes []utils.Type
+			for _, p := range fd.Params {
+				paramTypes = append(paramTypes, resolveType(p.(ast.Param).Type.(ast.Identifier).Name))
+			}
+			retType := resolveType(fd.ResultType.(ast.Identifier).Name)
+			symTab.Table[name] = utils.Fun{
+				Params: paramTypes,
+				Res:    retType,
+			}
+		}
+		// Second pass: type-check function bodies
+		for _, fn := range n.Functions {
+			fd := fn.(ast.FunctionDefinition)
+			fnTab := utils.NewSymTab(symTab)
+			for _, p := range fd.Params {
+				param := p.(ast.Param)
+				pName := param.Name.(ast.Identifier).Name
+				pType := resolveType(param.Type.(ast.Identifier).Name)
+				fnTab.Table[pName] = pType
+			}
+			typecheck(fd.Body, fnTab)
+		}
+		return typecheck(n.Block, symTab)
+
 	case ast.Literal:
 		var res utils.Type
 		_, ok := n.Value.(uint64)
@@ -129,26 +171,37 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		return res
 
 	case ast.FunctionCall:
-		var params []utils.Type
+		var argTypes []utils.Type
 		for _, par := range n.Args {
-			params = append(params, typecheck(par, symTab))
+			argTypes = append(argTypes, typecheck(par, symTab))
 		}
-		if n.Name.(ast.Identifier).Name == "print_int" {
-			if _, ok := params[len(params)-1].(utils.Int); !ok {
+		name := n.Name.(ast.Identifier).Name
+		if name == "print_int" {
+			if _, ok := argTypes[len(argTypes)-1].(utils.Int); !ok {
 				panic("params should be int")
 			}
-		} else if n.Name.(ast.Identifier).Name == "print_bool" {
-			if _, ok := params[len(params)-1].(utils.Bool); !ok {
+			return utils.Int{Name: "Int"}
+		} else if name == "print_bool" {
+			if _, ok := argTypes[len(argTypes)-1].(utils.Bool); !ok {
 				panic("params should be bool")
 			}
-		} else if n.Name.(ast.Identifier).Name == "read_int" {
+			return utils.Bool{Name: "Bool"}
+		} else if name == "read_int" {
 			return utils.Int{Name: "Int"}
 		}
-		res := typecheck(n.Name, symTab)
-		return utils.Fun{
-			Params: params,
-			Res:    res,
+		fnType := typecheck(n.Name, symTab)
+		if ft, ok := fnType.(utils.Fun); ok {
+			if len(ft.Params) != len(argTypes) {
+				panic(fmt.Sprintf("Function %s expects %d args, got %d", name, len(ft.Params), len(argTypes)))
+			}
+			for i, pt := range ft.Params {
+				if pt != argTypes[i] {
+					panic(fmt.Sprintf("Argument %d type mismatch: expected %v, got %v", i, pt, argTypes[i]))
+				}
+			}
+			return ft.Res
 		}
+		return fnType
 
 	case ast.Block:
 		var exprs []utils.Type
@@ -172,6 +225,9 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 
 	case ast.ContinueExpression:
 		return utils.Unit{}
+
+	case ast.ReturnExpression:
+		return typecheck(n.Result, symTab)
 
 	}
 	return utils.Unit{}

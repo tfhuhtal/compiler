@@ -137,7 +137,7 @@ func TestParser_Fun1(t *testing.T) {
 	tokens := tokenizer.Tokenize(`fun square(x: Int): Int {
 								return x * x;
 							  }`, "")
-	expected := `{[{{square { 1 5}} [{{x { 1 12}} {Int { 1 15}} { 1 12}}] {Int { 1 21}} {[] {[{{{x { 2 16}} * {x { 2 20}} { 2 16}} { 2 9}}] <nil> { 3 10}} { 3 10}} { 1 1}}] {[] <nil> { 3 10}} { 1 1}}`
+	expected := `{[{{square { 1 5}} [{{x { 1 12}} {Int { 1 15}} { 1 12}}] {Int { 1 21}} {[{{{x { 2 16}} * {x { 2 20}} { 2 16}} { 2 9}}] <nil> { 3 10}} { 1 1}}] {[] <nil> { 3 10}} { 1 1}}`
 	result := Parse(tokens)
 	if fmt.Sprintf("%v", result) != expected {
 		t.Errorf("Expected %v but got %v", expected, result)
@@ -161,9 +161,56 @@ func TestParser_Fun2(t *testing.T) {
 
 									print_int_twice(vec_len_squared(3, 4));
 								`, "")
-	expected := `{[{{square { 2 14}} [{{x { 2 21}} {Int { 2 24}} { 2 21}}] {Int { 2 30}} {[{[{{{x { 3 21}} * {x { 3 25}} { 3 21}} { 3 14}}] <nil> { 4 10}}] <nil> { 6 10}} { 2 10}} {{vec_len_squared { 6 14}} [{{x { 6 30}} {Int { 6 33}} { 6 30}} {{y { 6 38}} {Int { 6 41}} { 6 38}}] {Int { 6 47}} {[{[{{{{square { 7 21}} [{x { 7 28}}] { 7 27}} + {{square { 7 33}} [{y { 7 40}}] { 7 39}} { 7 27}} { 7 14}}] <nil> { 8 10}}] <nil> { 10 10}} { 6 10}} {{print_int_twice { 10 14}} [{{x { 10 30}} {Int { 10 33}} { 10 30}}] {Unit { 10 39}} {[{[{{print_int { 11 14}} [{x { 11 24}}] { 11 23}} {{print_int { 12 14}} [{x { 12 24}}] { 12 23}}] <nil> { 13 10}} {{print_int_twice { 15 10}} [{{vec_len_squared { 15 26}} [{3 { 15 42}} {4 { 15 45}}] { 15 41}}] { 15 25}}] <nil> { 15 48}} { 10 10}}] {[] <nil> { 15 48}} { 2 10}}`
+	expected := `{[{{square { 2 14}} [{{x { 2 21}} {Int { 2 24}} { 2 21}}] {Int { 2 30}} {[{{{x { 3 21}} * {x { 3 25}} { 3 21}} { 3 14}}] <nil> { 4 10}} { 2 10}} {{vec_len_squared { 6 14}} [{{x { 6 30}} {Int { 6 33}} { 6 30}} {{y { 6 38}} {Int { 6 41}} { 6 38}}] {Int { 6 47}} {[{{{{square { 7 21}} [{x { 7 28}}] { 7 27}} + {{square { 7 33}} [{y { 7 40}}] { 7 39}} { 7 27}} { 7 14}}] <nil> { 8 10}} { 6 10}} {{print_int_twice { 10 14}} [{{x { 10 30}} {Int { 10 33}} { 10 30}}] {Unit { 10 39}} {[{{print_int { 11 14}} [{x { 11 24}}] { 11 23}} {{print_int { 12 14}} [{x { 12 24}}] { 12 23}}] <nil> { 13 10}} { 10 10}}] {[{{print_int_twice { 15 10}} [{{vec_len_squared { 15 26}} [{3 { 15 42}} {4 { 15 45}}] { 15 41}}] { 15 25}}] <nil> { 15 48}} { 2 10}}`
 	result := Parse(tokens)
 	if fmt.Sprintf("%v", result) != expected {
 		t.Errorf("Expected %v but got %v", expected, result)
+	}
+}
+
+func TestParser_BreakContinue(t *testing.T) {
+	tests := []struct {
+		code       string
+		shouldPass bool
+	}{
+		{"while true do { break }", true},
+		{"while true do { continue }", true},
+		{"while true do { break; continue }", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.code, func(t *testing.T) {
+			tokens := tokenizer.Tokenize(tt.code, "")
+			if tt.shouldPass {
+				defer func() {
+					if r := recover(); r != nil {
+						t.Errorf("Unexpected error for code '%s': %v", tt.code, r)
+					}
+				}()
+				res := Parse(tokens)
+				if res == nil {
+					t.Errorf("Expected expression")
+				}
+			}
+		})
+	}
+}
+
+func TestParser_FunctionWithReturn(t *testing.T) {
+	tokens := tokenizer.Tokenize("fun foo(a: Int, b: Int): Int { return a + b; }", "")
+	res := Parse(tokens)
+	if res == nil {
+		t.Errorf("Expected module expression")
+	}
+}
+
+func TestParser_MutualRecursion(t *testing.T) {
+	tokens := tokenizer.Tokenize(`
+		fun f(x: Int): Int { return g(x); }
+		fun g(x: Int): Int { return f(x); }
+		f(1)
+	`, "")
+	res := Parse(tokens)
+	if res == nil {
+		t.Errorf("Expected module expression")
 	}
 }

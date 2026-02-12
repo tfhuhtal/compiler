@@ -60,7 +60,21 @@ func collectAllVars(instructions []ir.Instruction) []ir.IRVar {
 	return varList
 }
 
-func GenerateASM(instructions []ir.Instruction) string {
+func GenerateASM(funcMap map[string][]ir.Instruction) string {
+	var lines []string
+	emit := func(s string) { lines = append(lines, s) }
+
+	emit(".extern print_int\n.extern print_bool\n.extern read_int\n.section .text\n\n")
+
+	// Generate code for each function
+	for funcName, instructions := range funcMap {
+		lines = append(lines, generateFunction(funcName, instructions)...)
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+func generateFunction(funcName string, instructions []ir.Instruction) []string {
 	var lines []string
 	emit := func(s string) { lines = append(lines, s) }
 
@@ -86,11 +100,10 @@ func GenerateASM(instructions []ir.Instruction) string {
 
 	unaryPrint := false
 
-	// Emit a minimal function prologue
-	emit(".extern print_int\n.extern print_bool\n.extern read_int\n.section .text\n\n")
-	emit(".global main")
-	emit(".type main, @function")
-	emit("main:")
+	// Emit function prologue
+	emit(fmt.Sprintf(".global %s", funcName))
+	emit(fmt.Sprintf(".type %s, @function", funcName))
+	emit(fmt.Sprintf("%s:", funcName))
 	for k, v := range locs.varToLocation {
 		emit(fmt.Sprintf("# %s in %s", k, v))
 	}
@@ -122,7 +135,7 @@ func GenerateASM(instructions []ir.Instruction) string {
 
 		case ir.Label:
 			if i.String() != "" {
-				emit(fmt.Sprintf(".%s:\n", i.Label))
+				emit(fmt.Sprintf(".%s_%s:\n", funcName, i.Label))
 			}
 
 		case ir.Call:
@@ -157,12 +170,28 @@ func GenerateASM(instructions []ir.Instruction) string {
 		case ir.CondJump:
 			emit(fmt.Sprintf("# %s", i.String()))
 			emit(fmt.Sprintf("cmpq $0, %s", locs.varToLocation[i.Cond]))
-			emit(fmt.Sprintf("jne .%s", i.ThenLabel.Label))
-			emit(fmt.Sprintf("jmp .%s\n", i.ElseLabel.Label))
+			emit(fmt.Sprintf("jne .%s_%s", funcName, i.ThenLabel.Label))
+			emit(fmt.Sprintf("jmp .%s_%s\n", funcName, i.ElseLabel.Label))
 
 		case ir.Jump:
 			emit(fmt.Sprintf("# %s", i.String()))
-			emit(fmt.Sprintf("jmp .%s\n", i.Label.Label))
+			emit(fmt.Sprintf("jmp .%s_%s\n", funcName, i.Label.Label))
+
+		case ir.LoadParam:
+			emit(fmt.Sprintf("# %s", i.String()))
+			paramRegs := []string{"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"}
+			if i.Index >= len(paramRegs) {
+				panic("too many parameters")
+			}
+			emit(mov(paramRegs[i.Index], locs.varToLocation[i.Dest]))
+			emit("\n")
+
+		case ir.Return:
+			emit(fmt.Sprintf("# %s", i.String()))
+			emit(mov(locs.varToLocation[i.Value], "%rax"))
+			emit("movq %rbp, %rsp")
+			emit("popq %rbp")
+			emit("ret\n")
 
 		default:
 			emit(fmt.Sprintf("# Unhandled instruction: %v\n", i))
@@ -173,9 +202,9 @@ func GenerateASM(instructions []ir.Instruction) string {
 	emit("movq $0, %rax")
 	emit("movq %rbp, %rsp")
 	emit("popq %rbp")
-	emit("ret")
+	emit("ret\n")
 
-	return strings.Join(lines, "\n")
+	return lines
 }
 
 func generateCall(fun ir.IRVar, args []ir.IRVar, locs *Locals) []string {
@@ -258,9 +287,15 @@ func generateCall(fun ir.IRVar, args []ir.IRVar, locs *Locals) []string {
 
 func generateFunctionCall(fun ir.IRVar, args []ir.IRVar, locs *Locals) []string {
 	lines := []string{}
+	paramRegs := []string{"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"}
 
-	if len(args) > 0 && args[0] != "" {
-		lines = append(lines, mov(locs.varToLocation[args[0]], "%rdi"))
+	for i, arg := range args {
+		if i >= len(paramRegs) {
+			panic("too many arguments for function call")
+		}
+		if arg != "" {
+			lines = append(lines, mov(locs.varToLocation[arg], paramRegs[i]))
+		}
 	}
 	lines = append(lines, fmt.Sprintf("callq %s", fun))
 

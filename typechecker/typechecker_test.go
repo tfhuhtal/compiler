@@ -108,4 +108,73 @@ func TestTypecheck(t *testing.T) {
 		Type(res)
 	})
 
+	t.Run("Function definition type checks", func(t *testing.T) {
+		tokens := tokenizer.Tokenize(`
+			fun square(x: Int): Int {
+				return x * x;
+			}
+			square(5)
+		`, "")
+		res := parser.Parse(tokens)
+		got := Type(res)
+		if _, ok := got.(utils.Int); !ok {
+			t.Errorf("Expected Int type, got %T", got)
+		}
+	})
+
+	t.Run("Function call argument type mismatch panics", func(t *testing.T) {
+		tokens := tokenizer.Tokenize(`
+			fun square(x: Int): Int {
+				return x * x;
+			}
+			square(true)
+		`, "")
+		res := parser.Parse(tokens)
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Expected panic for type mismatch")
+			}
+		}()
+		Type(res)
+	})
+
+	t.Run("Mutual recursion type checks", func(t *testing.T) {
+		tokens := tokenizer.Tokenize(`
+			fun is_even(n: Int): Bool {
+				if n == 0 then {
+					return true;
+				} else {
+					return is_odd(n - 1);
+				}
+			}
+			fun is_odd(n: Int): Bool {
+				if n == 0 then {
+					return false;
+				} else {
+					return is_even(n - 1);
+				}
+			}
+			is_even(10)
+		`, "")
+		res := parser.Parse(tokens)
+		got := Type(res)
+		if _, ok := got.(utils.Bool); !ok {
+			t.Errorf("Expected Bool type, got %T", got)
+		}
+	})
+
+	t.Run("Multiple params function type checks", func(t *testing.T) {
+		tokens := tokenizer.Tokenize(`
+			fun add(a: Int, b: Int): Int {
+				return a + b;
+			}
+			add(3, 4)
+		`, "")
+		res := parser.Parse(tokens)
+		got := Type(res)
+		if _, ok := got.(utils.Int); !ok {
+			t.Errorf("Expected Int type, got %T", got)
+		}
+	})
+
 }

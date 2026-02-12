@@ -13,8 +13,34 @@ type SymTab = utils.SymTab[Value]
 type breakSignal struct{}
 type continueSignal struct{}
 
+type returnSignal struct {
+	value Value
+}
+
+type userFunc struct {
+	params []string
+	body   ast.Expression
+	symTab *SymTab
+}
+
 func interpret(node ast.Expression, symTab *SymTab) Value {
 	switch n := node.(type) {
+
+	case ast.Module:
+		for _, fn := range n.Functions {
+			fd := fn.(ast.FunctionDefinition)
+			name := fd.Name.(ast.Identifier).Name
+			var paramNames []string
+			for _, p := range fd.Params {
+				paramNames = append(paramNames, p.(ast.Param).Name.(ast.Identifier).Name)
+			}
+			symTab.Table[name] = userFunc{
+				params: paramNames,
+				body:   fd.Body,
+				symTab: symTab,
+			}
+		}
+		return interpret(n.Block, symTab)
 
 	case ast.Literal:
 
@@ -124,21 +150,46 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 		return false
 
 	case ast.FunctionCall:
-		if n.Name.(ast.Identifier).Name == "print_int" {
+		name := n.Name.(ast.Identifier).Name
+		if name == "print_int" {
 			for _, a := range n.Args {
 				v := interpret(a, symTab).(uint64)
 				fmt.Println(v)
 				return v
 			}
-		} else if n.Name.(ast.Identifier).Name == "print_bool" {
+		} else if name == "print_bool" {
 			for _, a := range n.Args {
 				v := interpret(a, symTab).(bool)
 				fmt.Println(v)
 				return v
 			}
-		} else if n.Name.(ast.Identifier).Name == "read_int" {
+		} else if name == "read_int" {
+			return uint64(0)
 		}
-		return interpret(n.Name, symTab)
+		// Look up user-defined function
+		fnVal := interpret(n.Name, symTab)
+		uf, ok := fnVal.(userFunc)
+		if !ok {
+			panic(fmt.Sprintf("Not a function: %s", name))
+		}
+		fnTab := utils.NewSymTab(uf.symTab)
+		for i, paramName := range uf.params {
+			fnTab.Table[paramName] = interpret(n.Args[i], symTab)
+		}
+		var result Value
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					if ret, ok := r.(returnSignal); ok {
+						result = ret.value
+					} else {
+						panic(r)
+					}
+				}
+			}()
+			result = interpret(uf.body, fnTab)
+		}()
+		return result
 
 	case ast.Block:
 		tab := utils.NewSymTab(symTab)
@@ -187,6 +238,10 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 
 	case ast.ContinueExpression:
 		panic(continueSignal{})
+
+	case ast.ReturnExpression:
+		val := interpret(n.Result, symTab)
+		panic(returnSignal{value: val})
 	}
 	return nil
 }

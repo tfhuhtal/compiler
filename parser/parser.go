@@ -407,7 +407,9 @@ func (p *Parser) parseFunctionDefinition() ast.Expression {
 	p.consume(")")
 	p.consume(":")
 	resultType := p.parseIdentifier()
+	p.consume("{")
 	body := p.parseBlock()
+	p.consume("}")
 	return ast.FunctionDefinition{
 		Name:       name,
 		Params:     params,

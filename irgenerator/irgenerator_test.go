@@ -11,7 +11,7 @@ func TestIr(t *testing.T) {
 		tokens := tokenizer.Tokenize("{123};", "")
 		parsed := parser.Parse(tokens)
 		generated := Generate(parsed)
-		if len(generated) != 1 {
+		if len(generated["main"]) != 1 {
 			t.Errorf("there should be only one ir command")
 		}
 	})
@@ -19,7 +19,7 @@ func TestIr(t *testing.T) {
 		tokens := tokenizer.Tokenize("var x: Int = 0; while true do { x = x + 1; if x == 5 then { break } }", "")
 		parsed := parser.Parse(tokens)
 		generated := Generate(parsed)
-		if len(generated) == 0 {
+		if len(generated["main"]) == 0 {
 			t.Errorf("Expected IR instructions for break")
 		}
 	})
@@ -27,7 +27,7 @@ func TestIr(t *testing.T) {
 		tokens := tokenizer.Tokenize("var x: Int = 0; while x < 10 do { x = x + 1; continue }", "")
 		parsed := parser.Parse(tokens)
 		generated := Generate(parsed)
-		if len(generated) == 0 {
+		if len(generated["main"]) == 0 {
 			t.Errorf("Expected IR instructions for continue")
 		}
 	})
@@ -35,8 +35,40 @@ func TestIr(t *testing.T) {
 		tokens := tokenizer.Tokenize("{123}", "")
 		parsed := parser.Parse(tokens)
 		generated := Generate(parsed)
-		if len(generated) != 2 {
-			t.Errorf("there should be only two ir commands, %v", generated)
+		if len(generated["main"]) != 2 {
+			t.Errorf("there should be only two ir commands, %v", generated["main"])
+		}
+	})
+	t.Run("Function definition generates separate instruction list", func(t *testing.T) {
+		tokens := tokenizer.Tokenize(`
+			fun square(x: Int): Int {
+				return x * x;
+			}
+			square(5)
+		`, "")
+		parsed := parser.Parse(tokens)
+		generated := Generate(parsed)
+		if _, ok := generated["square"]; !ok {
+			t.Errorf("Expected 'square' function in generated IR")
+		}
+		if _, ok := generated["main"]; !ok {
+			t.Errorf("Expected 'main' in generated IR")
+		}
+	})
+	t.Run("Multiple function definitions", func(t *testing.T) {
+		tokens := tokenizer.Tokenize(`
+			fun add(a: Int, b: Int): Int {
+				return a + b;
+			}
+			fun double(x: Int): Int {
+				return add(x, x);
+			}
+			double(21)
+		`, "")
+		parsed := parser.Parse(tokens)
+		generated := Generate(parsed)
+		if len(generated) != 3 {
+			t.Errorf("Expected 3 function entries (add, double, main), got %d", len(generated))
 		}
 	})
 }

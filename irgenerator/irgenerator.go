@@ -33,7 +33,7 @@ func new(rootTypes map[IRVar]Type) *IRGenerator {
 	return gen
 }
 
-func Generate(rootExpr ast.Expression) []ir.Instruction {
+func Generate(rootExpr ast.Expression) map[string][]ir.Instruction {
 	rootTypes := map[IRVar]utils.Type{
 		"+":   utils.Int{},
 		"*":   utils.Int{},
@@ -50,14 +50,89 @@ func Generate(rootExpr ast.Expression) []ir.Instruction {
 		"or":  utils.Bool{},
 	}
 
-	g := new(rootTypes)
+	funcs := make(map[string][]ir.Instruction)
 
-	rootSymTab := utils.NewSymTab[IRVar](nil)
-	for v := range g.varTypes {
-		rootSymTab.Table[v] = v
+	// Handle Module: generate IR for each function definition
+	if mod, ok := rootExpr.(ast.Module); ok {
+		rootSymTab := utils.NewSymTab[IRVar](nil)
+		for v := range rootTypes {
+			rootSymTab.Table[v] = v
+		}
+
+		for _, fn := range mod.Functions {
+			fd := fn.(ast.FunctionDefinition)
+			name := fd.Name.(ast.Identifier).Name
+			rootSymTab.Table[name] = name
+		}
+
+		for _, fn := range mod.Functions {
+			fd := fn.(ast.FunctionDefinition)
+			name := fd.Name.(ast.Identifier).Name
+
+			g := new(rootTypes)
+			// Copy function names into this generator's varTypes
+			for _, fn2 := range mod.Functions {
+				fd2 := fn2.(ast.FunctionDefinition)
+				n2 := fd2.Name.(ast.Identifier).Name
+				g.varTypes[n2] = utils.Fun{}
+			}
+
+			fnSymTab := utils.NewSymTab(rootSymTab)
+			for i, p := range fd.Params {
+				param := p.(ast.Param)
+				pName := param.Name.(ast.Identifier).Name
+				pType := resolveIRType(param.Type.(ast.Identifier).Name)
+				paramVar := g.newVar(pType)
+				fnSymTab.Table[pName] = paramVar
+				g.instructions = append(g.instructions, ir.LoadParam{
+					BaseInstruction: ir.BaseInstruction{Location: param.GetLocation()},
+					Index:           i,
+					Dest:            paramVar,
+				})
+				fnSymTab.Table[pName] = paramVar
+			}
+			g.visit(fnSymTab, fd.Body)
+			funcs[name] = g.instructions
+		}
+
+		// Generate main
+		g := new(rootTypes)
+		for _, fn := range mod.Functions {
+			fd := fn.(ast.FunctionDefinition)
+			name := fd.Name.(ast.Identifier).Name
+			g.varTypes[name] = utils.Fun{}
+		}
+		mainSymTab := utils.NewSymTab(rootSymTab)
+		result := g.visit(mainSymTab, mod.Block)
+		emitTopLevelPrint(g, result, rootExpr)
+		funcs["main"] = g.instructions
+	} else {
+		// No module, just a top-level expression
+		g := new(rootTypes)
+		rootSymTab := utils.NewSymTab[IRVar](nil)
+		for v := range g.varTypes {
+			rootSymTab.Table[v] = v
+		}
+		result := g.visit(rootSymTab, rootExpr)
+		emitTopLevelPrint(g, result, rootExpr)
+		funcs["main"] = g.instructions
 	}
-	result := g.visit(rootSymTab, rootExpr)
 
+	return funcs
+}
+
+func resolveIRType(name string) utils.Type {
+	switch name {
+	case "Int":
+		return utils.Int{Name: "Int"}
+	case "Bool":
+		return utils.Bool{Name: "Bool"}
+	default:
+		return utils.Unit{Name: name}
+	}
+}
+
+func emitTopLevelPrint(g *IRGenerator, result IRVar, rootExpr ast.Expression) {
 	if _, ok := g.varTypes[result].(utils.Int); ok {
 		g.instructions = append(g.instructions, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: rootExpr.GetLocation()},
@@ -73,7 +148,6 @@ func Generate(rootExpr ast.Expression) []ir.Instruction {
 			Dest:            g.newVar(utils.Unit{}),
 		})
 	}
-	return g.instructions
 }
 
 func (g *IRGenerator) newVar(t Type) IRVar {
@@ -374,6 +448,14 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 			Dest:            dest,
 		})
 		return dest
+
+	case ast.ReturnExpression:
+		val := g.visit(st, e.Result)
+		g.instructions = append(g.instructions, ir.Return{
+			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
+			Value:           val,
+		})
+		return "unit"
 
 	case ast.Unary:
 		var args []IRVar

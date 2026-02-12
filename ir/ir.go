@@ -111,6 +111,33 @@ func (c CondJump) GetVars() []IRVar {
 	return []IRVar{c.Cond}
 }
 
+type Return struct {
+	BaseInstruction
+	Value IRVar
+}
+
+func (r Return) String() string {
+	return fmt.Sprintf("Return(%v)", r.Value)
+}
+
+func (r Return) GetVars() []IRVar {
+	return []IRVar{r.Value}
+}
+
+type LoadParam struct {
+	BaseInstruction
+	Index int
+	Dest  IRVar
+}
+
+func (l LoadParam) String() string {
+	return fmt.Sprintf("LoadParam(%d, %v)", l.Index, l.Dest)
+}
+
+func (l LoadParam) GetVars() []IRVar {
+	return []IRVar{l.Dest}
+}
+
 type Label struct {
 	BaseInstruction
 	Label string

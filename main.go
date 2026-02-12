@@ -20,8 +20,7 @@ import (
 	"time"
 )
 
-func callCompiler(sourceCode string, file string) []byte {
-	var output []byte
+func callCompiler(sourceCode string, file string) (output []byte) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered from panic:", r)
@@ -31,8 +30,8 @@ func callCompiler(sourceCode string, file string) []byte {
 	tokens := tokenizer.Tokenize(sourceCode, file)
 	res := parser.Parse(tokens)
 	typechecker.Type(res)
-	instructions := irgenerator.Generate(res)
-	asm := asmgenerator.GenerateASM(instructions)
+	funcMap := irgenerator.Generate(res)
+	asm := asmgenerator.GenerateASM(funcMap)
 	output, _ = assembler.Assemble(asm, "")
 	return output
 }
@@ -127,7 +126,7 @@ func main() {
 				input = matches[1]
 			}
 		} else if matched, _ := regexp.MatchString(`^--inputFile=(.+)`, arg); matched {
-			re := regexp.MustCompile(`^--input=(.+)`)
+			re := regexp.MustCompile(`^--inputFile=(.+)`)
 			matches := re.FindStringSubmatch(arg)
 			if len(matches) > 1 {
 				inputFile = matches[1]
@@ -164,6 +163,15 @@ func main() {
 	if command == "" {
 		fmt.Fprintln(os.Stderr, "Error: command argument missing")
 		return
+	}
+
+	if inputFile != "" && input == "" {
+		data, readErr := os.ReadFile(inputFile)
+		if readErr != nil {
+			fmt.Fprintf(os.Stderr, "Error: could not read file %s: %v\n", inputFile, readErr)
+			return
+		}
+		input = string(data)
 	}
 
 	if command == "compile" {

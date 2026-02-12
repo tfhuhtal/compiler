@@ -319,10 +319,10 @@ func (p *Parser) parseTopExpression() ast.Expression {
 	if p.peek().Text == "var" {
 		p.consume("var")
 		decl := p.parseIdentifier()
-		var typed ast.Identifier
+		var typed ast.Expression
 		if p.peek().Text == ":" {
 			p.consume(":")
-			typed = p.parseIdentifier()
+			typed = p.parseTypeAnnotation()
 		}
 
 		p.consume("=")
@@ -335,6 +335,31 @@ func (p *Parser) parseTopExpression() ast.Expression {
 		}
 	}
 	return p.parseExpression()
+}
+
+func (p *Parser) parseTypeAnnotation() ast.Expression {
+	if p.peek().Text == "(" {
+		loc := p.peek().Location
+		p.consume("(")
+		var params []ast.Expression
+		for p.peek().Text != ")" {
+			params = append(params, p.parseIdentifier())
+			if p.peek().Text != "," {
+				break
+			}
+			p.consume(",")
+		}
+		p.consume(")")
+		p.consume("=")
+		p.consume(">")
+		resType := p.parseIdentifier()
+		return ast.FunType{
+			Params:   params,
+			ResType:  resType,
+			Location: loc,
+		}
+	}
+	return p.parseIdentifier()
 }
 
 func (p *Parser) parseParams() []ast.Expression {

@@ -77,7 +77,23 @@ func TestInterpreter_SimpleFunction(t *testing.T) {
 	}
 }
 
-func TestInterpreter_MultipleFunctions(t *testing.T) {
+func TestInterpreter_MultipleFunctions_1(t *testing.T) {
+	res := helper(`
+		fun square(x: Int): Int {
+			return x * x;
+		}
+		fun vec_len_squared(x: Int, y: Int): Int {
+			return square(x) + square(y);
+		}
+		vec_len_squared(3, 4);
+	`)
+	expected := "<nil>"
+	if fmt.Sprintf("%v", res) != expected {
+		t.Errorf("Expected %v but got %v", expected, res)
+	}
+}
+
+func TestInterpreter_MultipleFunctions_2(t *testing.T) {
 	res := helper(`
 		fun square(x: Int): Int {
 			return x * x;

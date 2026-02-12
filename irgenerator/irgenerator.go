@@ -13,11 +13,12 @@ type Type = utils.Type
 type SymTab = utils.SymTab[IRVar]
 
 type IRGenerator struct {
-	varTypes       map[IRVar]Type
-	rootTypes      map[IRVar]Type
-	instructions   []ir.Instruction
-	loopStartLabel *ir.Label
-	loopEndLabel   *ir.Label
+	varTypes        map[IRVar]Type
+	rootTypes       map[IRVar]Type
+	instructions    []ir.Instruction
+	loopStartLabel  *ir.Label
+	loopEndLabel    *ir.Label
+	funcReturnTypes map[string]Type
 }
 
 func new(rootTypes map[IRVar]Type) *IRGenerator {
@@ -59,10 +60,14 @@ func Generate(rootExpr ast.Expression) map[string][]ir.Instruction {
 			rootSymTab.Table[v] = v
 		}
 
+		// Collect function type info (return types)
+		funcTypes := make(map[string]utils.Type)
 		for _, fn := range mod.Functions {
 			fd := fn.(ast.FunctionDefinition)
 			name := fd.Name.(ast.Identifier).Name
 			rootSymTab.Table[name] = name
+			retType := resolveIRType(fd.ResultType.(ast.Identifier).Name)
+			funcTypes[name] = retType
 		}
 
 		for _, fn := range mod.Functions {
@@ -70,6 +75,7 @@ func Generate(rootExpr ast.Expression) map[string][]ir.Instruction {
 			name := fd.Name.(ast.Identifier).Name
 
 			g := new(rootTypes)
+			g.funcReturnTypes = funcTypes
 			// Copy function names into this generator's varTypes
 			for _, fn2 := range mod.Functions {
 				fd2 := fn2.(ast.FunctionDefinition)
@@ -97,6 +103,7 @@ func Generate(rootExpr ast.Expression) map[string][]ir.Instruction {
 
 		// Generate main
 		g := new(rootTypes)
+		g.funcReturnTypes = funcTypes
 		for _, fn := range mod.Functions {
 			fd := fn.(ast.FunctionDefinition)
 			name := fd.Name.(ast.Identifier).Name
@@ -440,10 +447,15 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		for _, arg := range e.Args {
 			args = append(args, g.visit(st, arg))
 		}
-		dest := g.newVar(utils.Unit{})
+		funName := e.Name.(ast.Identifier).Name
+		destType := utils.Type(utils.Unit{})
+		if retType, ok := g.funcReturnTypes[funName]; ok {
+			destType = retType
+		}
+		dest := g.newVar(destType)
 		g.instructions = append(g.instructions, ir.Call{
 			BaseInstruction: ir.BaseInstruction{Location: e.GetLocation()},
-			Fun:             e.Name.(ast.Identifier).Name,
+			Fun:             funName,
 			Args:            args,
 			Dest:            dest,
 		})

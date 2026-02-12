@@ -185,3 +185,14 @@ func (FunctionDefinition) isExpression() {}
 func (f FunctionDefinition) GetLocation() Location {
 	return f.Location
 }
+
+type FunType struct {
+	Params   []Expression
+	ResType  Expression
+	Location Location
+}
+
+func (FunType) isExpression() {}
+func (f FunType) GetLocation() Location {
+	return f.Location
+}

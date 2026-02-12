@@ -112,13 +112,15 @@ func interpret(node ast.Expression, symTab *SymTab) Value {
 		if _, exists := symTab.Table[str]; exists {
 			panic(fmt.Sprintf("%s already declared", n.Variable))
 		}
-		if n.Typed.(ast.Identifier).Name == "Bool" {
-			if _, ok := value.(bool); !ok {
-				panic("Must be boolean")
-			}
-		} else if n.Typed.(ast.Identifier).Name == "Int" {
-			if _, ok := value.(uint64); !ok {
-				panic("Must be integer")
+		if n.Typed != nil {
+			if n.Typed.(ast.Identifier).Name == "Bool" {
+				if _, ok := value.(bool); !ok {
+					panic("Must be boolean")
+				}
+			} else if n.Typed.(ast.Identifier).Name == "Int" {
+				if _, ok := value.(uint64); !ok {
+					panic("Must be integer")
+				}
 			}
 		}
 		symTab.Table[str] = value

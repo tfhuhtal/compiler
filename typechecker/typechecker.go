@@ -42,13 +42,26 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		for _, fn := range n.Functions {
 			fd := fn.(ast.FunctionDefinition)
 			fnTab := utils.NewSymTab(symTab)
+			retType := resolveType(fd.ResultType.(ast.Identifier).Name)
+			fnTab.Table["__return_type__"] = retType
+			seen := make(map[string]bool)
 			for _, p := range fd.Params {
 				param := p.(ast.Param)
 				pName := param.Name.(ast.Identifier).Name
+				if seen[pName] {
+					panic(fmt.Sprintf("Duplicate parameter name: %s", pName))
+				}
+				seen[pName] = true
 				pType := resolveType(param.Type.(ast.Identifier).Name)
 				fnTab.Table[pName] = pType
 			}
-			typecheck(fd.Body, fnTab)
+			bodyType := typecheck(fd.Body, fnTab)
+			if _, ok := bodyType.(utils.Unit); !ok {
+				if bodyType != retType {
+					panic(fmt.Sprintf("Function %s return type mismatch: expected %v, got %v",
+						fd.Name.(ast.Identifier).Name, retType, bodyType))
+				}
+			}
 		}
 		return typecheck(n.Block, symTab)
 
@@ -130,13 +143,40 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		if _, exists := symTab.Table[str]; exists {
 			panic(fmt.Sprintf("%s already declared", n.Variable))
 		}
-		if n.Typed.(ast.Identifier).Name == "Bool" {
-			if _, ok := value.(utils.Bool); !ok {
-				panic("Must be boolean")
-			}
-		} else if n.Typed.(ast.Identifier).Name == "Int" {
-			if _, ok := value.(utils.Int); !ok {
-				panic("Must be integer")
+		if n.Typed != nil {
+			switch typed := n.Typed.(type) {
+			case ast.Identifier:
+				if typed.Name == "Bool" {
+					if _, ok := value.(utils.Bool); !ok {
+						panic("Must be boolean")
+					}
+				} else if typed.Name == "Int" {
+					if _, ok := value.(utils.Int); !ok {
+						panic("Must be integer")
+					}
+				}
+			case ast.FunType:
+				var paramTypes []utils.Type
+				for _, p := range typed.Params {
+					paramTypes = append(paramTypes, resolveType(p.(ast.Identifier).Name))
+				}
+				resType := resolveType(typed.ResType.(ast.Identifier).Name)
+				expected := utils.Fun{Params: paramTypes, Res: resType}
+				if ft, ok := value.(utils.Fun); ok {
+					if len(ft.Params) != len(expected.Params) {
+						panic("Function type parameter count mismatch")
+					}
+					for i, pt := range expected.Params {
+						if pt != ft.Params[i] {
+							panic(fmt.Sprintf("Function type parameter %d mismatch", i))
+						}
+					}
+					if expected.Res != ft.Res {
+						panic("Function type return type mismatch")
+					}
+				} else {
+					panic("Expected function type")
+				}
 			}
 		}
 		symTab.Table[str] = value
@@ -227,7 +267,19 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 		return utils.Unit{}
 
 	case ast.ReturnExpression:
-		return typecheck(n.Result, symTab)
+		retVal := typecheck(n.Result, symTab)
+		// Look up expected return type from enclosing function
+		cur := symTab
+		for cur != nil {
+			if expected, exists := cur.Table["__return_type__"]; exists {
+				if retVal != expected {
+					panic(fmt.Sprintf("Return type mismatch: expected %v, got %v", expected, retVal))
+				}
+				break
+			}
+			cur = cur.Parent
+		}
+		return retVal
 
 	}
 	return utils.Unit{}
@@ -235,6 +287,9 @@ func typecheck(node ast.Expression, symTab *SymTab) utils.Type {
 
 func Type(nodes ast.Expression) any {
 	tab := utils.NewSymTab[utils.Type](nil)
+	tab.Table["print_int"] = utils.Fun{Params: []utils.Type{utils.Int{Name: "Int"}}, Res: utils.Unit{Name: "Unit"}}
+	tab.Table["print_bool"] = utils.Fun{Params: []utils.Type{utils.Bool{Name: "Bool"}}, Res: utils.Unit{Name: "Unit"}}
+	tab.Table["read_int"] = utils.Fun{Params: []utils.Type{}, Res: utils.Int{Name: "Int"}}
 	res := typecheck(nodes, tab)
 	return res
 }

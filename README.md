@@ -41,20 +41,9 @@ Run the compiler as server
 ```bash
 go run main.go serve --host=0.0.0.0
 ```
-Then you can send a POST request to `http://localhost:3000/` with the following body:
+Then you can send request to the server, for example:
 ```
-{
-  "code": "var n: Int = read_int();
-          print_int(n);
-          while n > 1 do {
-            if n % 2 == 0 then {
-              n = n / 2;
-            } else {
-              n = 3*n + 1;
-            }
-            print_int(n);
-          }"
-}
+echo '{"command":"compile","code":"var x: Int = 10; var y: Int = 20; print_int(x + y);"}' | nc -w 2 -q 1 127.0.0.1 3000
 ```
 
 Run the interpreter

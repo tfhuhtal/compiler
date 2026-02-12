@@ -12,7 +12,13 @@ fun fibonacci(x: Int): Int {
     return fibonacci(x - 1) + fibonacci(x - 2);
   }
 }
-print_int(fibonacci(10));
+
+var i: Int = 0;
+
+while i <= 15 do {
+  print_int(fibonacci(i));
+  i = i + 1;
+}
 ```
 
 ## Installation

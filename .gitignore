@@ -25,3 +25,5 @@ go.work.sum
 .env
 
 .test-gadget/
+test-gadget.py
+compiler

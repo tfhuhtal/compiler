@@ -55,6 +55,30 @@ func TestIr(t *testing.T) {
 			t.Errorf("Expected 'main' in generated IR")
 		}
 	})
+	t.Run("Assign print_int to variable and call", func(t *testing.T) {
+		tokens := tokenizer.Tokenize("var x = print_int; x(4)", "")
+		parsed := parser.Parse(tokens)
+		generated := Generate(parsed)
+		if len(generated["main"]) == 0 {
+			t.Errorf("Expected IR instructions for function reference call")
+		}
+	})
+	t.Run("Assign print_int to typed variable and call", func(t *testing.T) {
+		tokens := tokenizer.Tokenize("var x: (Int) => Unit = print_int; x(4)", "")
+		parsed := parser.Parse(tokens)
+		generated := Generate(parsed)
+		if len(generated["main"]) == 0 {
+			t.Errorf("Expected IR instructions for typed function reference call")
+		}
+	})
+	t.Run("Assign print_bool to typed variable and call", func(t *testing.T) {
+		tokens := tokenizer.Tokenize("var x: (Bool) => Unit = print_bool; x(true)", "")
+		parsed := parser.Parse(tokens)
+		generated := Generate(parsed)
+		if len(generated["main"]) == 0 {
+			t.Errorf("Expected IR instructions for bool function reference call")
+		}
+	})
 	t.Run("Multiple function definitions", func(t *testing.T) {
 		tokens := tokenizer.Tokenize(`
 			fun add(a: Int, b: Int): Int {

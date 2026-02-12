@@ -36,19 +36,22 @@ func new(rootTypes map[IRVar]Type) *IRGenerator {
 
 func Generate(rootExpr ast.Expression) map[string][]ir.Instruction {
 	rootTypes := map[IRVar]utils.Type{
-		"+":   utils.Int{},
-		"*":   utils.Int{},
-		"/":   utils.Int{},
-		"%":   utils.Int{},
-		"-":   utils.Int{},
-		">":   utils.Bool{},
-		"==":  utils.Bool{},
-		"<=":  utils.Bool{},
-		"<":   utils.Bool{},
-		">=":  utils.Bool{},
-		"!=":  utils.Bool{},
-		"and": utils.Bool{},
-		"or":  utils.Bool{},
+		"+":          utils.Int{},
+		"*":          utils.Int{},
+		"/":          utils.Int{},
+		"%":          utils.Int{},
+		"-":          utils.Int{},
+		">":          utils.Bool{},
+		"==":         utils.Bool{},
+		"<=":         utils.Bool{},
+		"<":          utils.Bool{},
+		">=":         utils.Bool{},
+		"!=":         utils.Bool{},
+		"and":        utils.Bool{},
+		"or":         utils.Bool{},
+		"print_int":  utils.Fun{Params: []utils.Type{utils.Int{}}, Res: utils.Unit{}},
+		"print_bool": utils.Fun{Params: []utils.Type{utils.Bool{}}, Res: utils.Unit{}},
+		"read_int":   utils.Fun{Params: []utils.Type{}, Res: utils.Int{}},
 	}
 
 	funcs := make(map[string][]ir.Instruction)
@@ -315,6 +318,10 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		if _, exists := st.Table[name]; exists {
 			panic(fmt.Sprintf("%v already declared", e.Variable))
 		}
+		if _, isFun := g.varTypes[value].(utils.Fun); isFun {
+			st.Table[name] = value
+			return "unit"
+		}
 		newVar := g.newVar(g.varTypes[value])
 		st.Table[name] = newVar
 		g.instructions = append(g.instructions, ir.Copy{
@@ -447,7 +454,7 @@ func (g *IRGenerator) visit(st *SymTab, expr ast.Expression) IRVar {
 		for _, arg := range e.Args {
 			args = append(args, g.visit(st, arg))
 		}
-		funName := e.Name.(ast.Identifier).Name
+		funName := g.visit(st, e.Name)
 		destType := utils.Type(utils.Unit{})
 		if retType, ok := g.funcReturnTypes[funName]; ok {
 			destType = retType
